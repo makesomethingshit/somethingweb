@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="ko" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>최준수 | Visual Translator & Motion Designer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Pretendard:wght@300;400;500&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Pretendard', 'sans-serif'],
+              serif: ['"Playfair Display"', '"Noto Serif KR"', 'serif'],
+            },
+            colors: {
+              paper: '#F9F8F4',
+              ink: '#2C2C2C',
+              sub: '#5A5A5A',
+              accent: '#8C7B6C', /* Soft Brown */
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Pretendard', sans-serif;
+        background-color: #F9F8F4;
+        color: #2C2C2C;
+      }
+      /* Custom scrollbar for light theme */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #F9F8F4; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #D1D1D1; 
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #A0A0A0; 
+      }
+      .font-serif-kr {
+        font-family: 'Noto Serif KR', serif;
+      }
+
+      /* 3D Utilities */
+      .preserve-3d {
+        transform-style: preserve-3d;
+      }
+      .transform-style-3d {
+        transform-style: preserve-3d;
+      }
+      /* Helper classes for static rotations if needed, though framer-motion handles most */
+      .rotate-y-90 { transform: rotateY(90deg); }
+      .rotate-y-[-90] { transform: rotateY(-90deg); }
+      .rotate-x-90 { transform: rotateX(90deg); }
+      .rotate-x-[-90] { transform: rotateX(-90deg); }
+      .translate-z-\[50px\] { transform: translateZ(50vw) md:translateZ(125px); } /* Responsive Z translation handled via inline style usually, but keeping simple here */
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^6.22.3",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.24",
+    "react-scroll": "https://aistudiocdn.com/react-scroll@^1.9.3",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+    "gsap": "https://aistudiocdn.com/gsap@^3.12.5",
+    "gsap/ScrollTrigger": "https://aistudiocdn.com/gsap@^3.12.5/ScrollTrigger",
+    "gsap/": "https://aistudiocdn.com/gsap@^3.13.0/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
