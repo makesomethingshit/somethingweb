@@ -4,6 +4,10 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ProjectReveal from './ProjectReveal';
+import { PROJECTS } from '../constants';
+import { Project } from '../types';
+import ProjectModal from './ProjectModal';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -14,12 +18,28 @@ const Hero: React.FC = () => {
   const scrollHintRef = useRef<HTMLDivElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
+
+  const handleOpenProject = () => {
+    setSelectedProject(PROJECTS[0]);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setSelectedProject(null), 300);
+    setResetKey(prev => prev + 1);
+  };
+
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const [loadProgress, setLoadProgress] = useState(0);
   const imagesRef = useRef<ImageBitmap[]>([]);
 
   const frameCount = 122;
   const currentFrameRef = useRef(0);
+  const [revealProgress, setRevealProgress] = useState(0);
 
   const gridAnimatedRef = useRef(false);
 
@@ -200,11 +220,15 @@ const Hero: React.FC = () => {
           if (p > 0.8) {
             const indexProgress = (p - 0.8) / 0.2;
             indexContainerRef.current.style.opacity = Math.min(1, indexProgress * 2).toString();
-            indexContainerRef.current.style.transform = `translateY(${(1 - indexProgress) * 20}px)`;
+            // indexContainerRef.current.style.transform = `translateY(${(1 - indexProgress) * 20}px)`; // Removed translation for cleaner reveal
             indexContainerRef.current.style.pointerEvents = 'auto';
+
+            // Pass progress to ProjectReveal (0 to 1 as we scroll from 80% to 100%)
+            setRevealProgress(indexProgress);
           } else {
             indexContainerRef.current.style.opacity = '0';
             indexContainerRef.current.style.pointerEvents = 'none';
+            setRevealProgress(0);
           }
         }
 
@@ -260,90 +284,29 @@ const Hero: React.FC = () => {
           ref={gridContainerRef}
           className="absolute inset-0 w-full h-full z-20 pointer-events-none mix-blend-multiply opacity-0 flex items-center justify-center p-4 md:p-12 lg:p-24"
         >
-          <div className="w-full h-full max-w-[1600px] border-2 border-[#2A52BE] relative flex">
-            {/* Spine (Center Line) */}
-            <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-[#2A52BE] -translate-x-1/2 hidden md:block opacity-50 border-r border-dashed border-[#2A52BE]"></div>
 
-            {/* Left Page */}
-            <div className="w-full md:w-1/2 h-full border-r border-[#2A52BE] relative flex flex-col">
-              {/* Horizontal Lines */}
-              {[...Array(8)].map((_, i) => (
-                <div key={`h-left-${i}`} className="grid-h-line absolute w-full h-[1px] bg-[#2A52BE]/30 left-0" style={{ top: `${(i + 1) * 11.1}%` }}></div>
-              ))}
-              {/* Vertical Lines */}
-              <div className="grid-v-line absolute top-0 bottom-0 w-[1px] bg-[#2A52BE]/30 left-[10%]"></div>
-              <div className="grid-v-line absolute top-0 bottom-0 w-[1px] bg-[#2A52BE]/30 left-[50%]"></div>
-              <div className="grid-v-line absolute top-0 bottom-0 w-[1px] bg-[#2A52BE]/30 right-[10%]"></div>
-            </div>
-
-            {/* Right Page */}
-            <div className="hidden md:flex w-1/2 h-full relative flex-col">
-              {/* Horizontal Lines */}
-              {[...Array(8)].map((_, i) => (
-                <div key={`h-right-${i}`} className="grid-h-line absolute w-full h-[1px] bg-[#2A52BE]/30 left-0" style={{ top: `${(i + 1) * 11.1}%` }}></div>
-              ))}
-              {/* Vertical Lines */}
-              <div className="grid-v-line absolute top-0 bottom-0 w-[1px] bg-[#2A52BE]/30 left-[10%]"></div>
-              <div className="grid-v-line absolute top-0 bottom-0 w-[1px] bg-[#2A52BE]/30 left-[50%]"></div>
-              <div className="grid-v-line absolute top-0 bottom-0 w-[1px] bg-[#2A52BE]/30 right-[10%]"></div>
-            </div>
-          </div>
         </div>
 
         {/* Index Content (End View) */}
         <div
           ref={indexContainerRef}
-          className="absolute inset-0 flex items-center justify-center z-30 opacity-0 pointer-events-none p-4 md:p-12 lg:p-24"
+          className="absolute inset-0 grid grid-cols-12 gap-8 items-center z-30 opacity-0 pointer-events-none p-4 md:p-12 lg:p-24"
         >
-          <div className="w-full max-w-[1600px] h-full flex flex-col md:flex-row relative">
+          <div className="col-span-12 md:col-span-8">
+            <ProjectReveal
+              progress={revealProgress}
+              onOpenProject={handleOpenProject}
+              resetKey={resetKey}
+            />
+          </div>
 
-            {/* Left Page: Title & Info */}
-            <div className="w-full md:w-1/2 h-full p-6 md:p-12 flex flex-col justify-between relative">
-
-              {/* Content positioned relative to grid lines approximately */}
-              <div className="mt-[10%] md:mt-[11%]">
-                <h2 className="font-serif text-5xl md:text-7xl lg:text-8xl text-ink tracking-tighter leading-none">
-                  PREFACE
-                </h2>
-              </div>
-
-              <div className="flex-grow flex flex-col justify-center">
-                <div className="w-24 h-[1px] bg-ink/30 mb-6"></div>
-                <p className="font-sans text-xs md:text-sm text-sub tracking-widest uppercase leading-relaxed">
-                  Portfolio 2025<br />
-                  Visual Translator
-                </p>
-              </div>
-
-              <div className="mb-[10%]">
-                <p className="font-serif-kr text-base md:text-lg text-sub font-light leading-relaxed">
-                  보이지 않는 가치를<br />
-                  보이는 경험으로<br />
-                  번역합니다.
-                </p>
-              </div>
+          <div className="col-span-12 md:col-span-4 text-ink flex flex-col justify-center">
+            <div style={{ opacity: Math.max(0, (revealProgress - 0.5) * 2), transform: `translateY(${(1 - Math.max(0, (revealProgress - 0.5) * 2)) * 20}px)` }}>
+              <h2 className="text-5xl font-serif mb-6">{PROJECTS[0].title}</h2>
+              <p className="font-sans text-sm tracking-widest uppercase opacity-70">
+                {PROJECTS[0].description}
+              </p>
             </div>
-
-            {/* Right Page: Preface Text */}
-            <div className="w-full md:w-1/2 h-full p-6 md:p-12 flex flex-col justify-center pl-12 md:pl-24">
-              <div className="max-w-md">
-                <p className="font-serif text-xl md:text-2xl text-ink leading-relaxed italic mb-8">
-                  "Design is the silent ambassador of your brand."
-                </p>
-                <p className="font-sans text-sm md:text-base text-sub leading-loose mb-8">
-                  우리는 수많은 정보와 소음 속에 살고 있습니다.<br />
-                  그 속에서 진정한 의미를 찾아내고,<br />
-                  사용자의 언어로 번역하여 전달하는 것.<br />
-                  그것이 제가 생각하는 디자인의 본질입니다.
-                </p>
-                <p className="font-sans text-sm md:text-base text-sub leading-loose">
-                  단순한 시각적 아름다움을 넘어,<br />
-                  문제의 본질을 꿰뚫고 해결책을 제시하는<br />
-                  Visual Translator가 되겠습니다.
-                </p>
-              </div>
-            </div>
-
           </div>
         </div>
 
@@ -361,6 +324,12 @@ const Hero: React.FC = () => {
 
       {/* Scroll Spacer */}
       <div ref={spacerRef} className="relative w-full h-[500vh] pointer-events-none"></div>
+
+      <ProjectModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        project={selectedProject}
+      />
     </>
   );
 };

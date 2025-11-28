@@ -25,15 +25,17 @@ const Projects: React.FC = () => {
             {PROJECTS.map((project, index) => (
                 <section key={project.id || index} className="min-h-screen flex flex-col md:flex-row border-b border-ink/10 last:border-b-0">
                     {/* Left Page (Visual) */}
-                    <div className="w-full md:w-1/2 h-[50vh] md:h-screen relative overflow-hidden group cursor-pointer" onClick={() => handleOpenModal(project)}>
-                        <div className="absolute inset-0 bg-ink/5 z-10 group-hover:bg-ink/0 transition-colors duration-700"></div>
-                        <img
-                            src={project.imageUrl}
-                            alt={project.title}
-                            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                        />
-                        <div className="absolute bottom-8 left-8 z-20 md:hidden">
-                            <span className="bg-paper text-ink px-4 py-2 text-xs font-sans uppercase tracking-widest">Tap to View</span>
+                    <div className="w-full md:w-1/2 h-[50vh] md:h-screen relative overflow-hidden flex items-center justify-center bg-paper">
+                        <div className="relative w-full h-full group cursor-pointer" onClick={() => handleOpenModal(project)}>
+                            <div className="absolute inset-0 bg-ink/5 z-10 group-hover:bg-ink/0 transition-colors duration-700"></div>
+                            <img
+                                src={project.imageUrl}
+                                alt={project.title}
+                                className="w-full h-full object-contain transition-transform duration-1000 group-hover:scale-105"
+                            />
+                            <div className="absolute bottom-8 left-8 z-20 md:hidden">
+                                <span className="bg-paper text-ink px-4 py-2 text-xs font-sans uppercase tracking-widest">Tap to View</span>
+                            </div>
                         </div>
                     </div>
 

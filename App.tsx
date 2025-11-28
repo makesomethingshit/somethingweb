@@ -7,6 +7,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import ProjectDetail from './pages/ProjectDetail';
 import Skills from './components/Skills';
 import Projects from './components/Projects';
 import Experience from './components/Experience';
@@ -116,6 +117,8 @@ const AnimatedRoutes: React.FC = () => {
             <Projects />
           </PageWrapper>
         } />
+
+        <Route path="/work/project-1" element={<ProjectDetail />} />
 
         {/* About: History & Contact */}
         <Route path="/about" element={<AboutPage />} />
