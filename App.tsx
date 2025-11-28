@@ -2,6 +2,9 @@
 import React, { useEffect } from 'react';
 import { MemoryRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import Lenis from 'lenis';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Skills from './components/Skills';
@@ -13,6 +16,8 @@ import AIModal from './components/AIModal';
 import InteractiveBackground from './components/InteractiveBackground';
 import Navigation from './components/Navigation';
 import GridOverlay from './components/GridOverlay';
+
+gsap.registerPlugin(ScrollTrigger);
 
 // ScrollToTop Component
 const ScrollToTop = () => {
@@ -120,6 +125,31 @@ const AnimatedRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+    });
+
+    lenis.on('scroll', ScrollTrigger.update);
+
+    const update = (time: number) => {
+      lenis.raf(time * 1000);
+    };
+
+    gsap.ticker.add(update);
+
+    gsap.ticker.lagSmoothing(0);
+
+    return () => {
+      lenis.destroy();
+      gsap.ticker.remove(update);
+    };
+  }, []);
+
   return (
     <Router>
       <ScrollToTop />
@@ -133,7 +163,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Subtle Background */}
-        <div className="fixed inset-0 pointer-events-none opacity-20 z-0 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-multiply"></div>
+        <div className="fixed inset-0 pointer-events-none opacity-40 z-0 bg-[url('/frames/intro_book_video00121.jpg')] bg-cover bg-center mix-blend-multiply"></div>
         <InteractiveBackground />
         <DustOverlay />
         <Navigation />
