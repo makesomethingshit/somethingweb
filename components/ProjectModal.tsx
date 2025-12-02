@@ -51,7 +51,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, project })
             animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-8 pointer-events-none"
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 md:p-8 pointer-events-none"
           >
             <div className="bg-paper w-full max-w-4xl h-[85vh] md:h-[90vh] shadow-2xl overflow-hidden flex flex-col pointer-events-auto relative"
               style={{
@@ -63,6 +63,8 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, project })
 
               {/* Binding Effect (Top) */}
               <div className="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-black/10 to-transparent z-20 pointer-events-none"></div>
+              {/* Red Margin Line */}
+              <div className="absolute top-0 left-6 md:left-12 w-[1px] h-full bg-red-300/50 z-10 pointer-events-none"></div>
 
               {/* Close Button (Hand-drawn style) */}
               <button
@@ -74,8 +76,10 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, project })
 
               {/* Scrollable Content */}
               <div
-                className="overflow-y-auto flex-1 custom-scrollbar relative p-6 md:p-12 pt-16"
-                data-lenis-prevent
+                className="overflow-y-auto flex-1 custom-scrollbar relative p-6 md:p-12 pt-16 overscroll-contain"
+                data-lenis-prevent="true"
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
               >
 
                 {/* Content Container */}

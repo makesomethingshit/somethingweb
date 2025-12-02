@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -9,15 +8,16 @@ import { PROJECTS } from '../constants';
 import { Project } from '../types';
 import ProjectModal from './ProjectModal';
 import { motion } from 'framer-motion';
+import { useIntro } from '../context/IntroContext';
 
-const TypewriterText: React.FC<{ text: string; delay?: number; className?: string }> = ({ text, delay = 0, className = "" }) => {
+const TypewriterText: React.FC<{ text: string; delay?: number; className?: string; style?: React.CSSProperties }> = ({ text, delay = 0, className = "", style = {} }) => {
   const letters = Array.from(text);
 
   const container = {
     hidden: { opacity: 0 },
     visible: (i = 1) => ({
       opacity: 1,
-      transition: { staggerChildren: 0.05, delayChildren: delay }
+      transition: { staggerChildren: 0.02, delayChildren: delay } // Faster stagger
     })
   };
 
@@ -44,7 +44,7 @@ const TypewriterText: React.FC<{ text: string; delay?: number; className?: strin
 
   return (
     <motion.div
-      style={{ display: "inline-block" }} // Ensure inline-block for proper spacing
+      style={{ display: "block", ...style }}
       variants={container}
       initial="hidden"
       animate="visible"
@@ -62,19 +62,28 @@ const TypewriterText: React.FC<{ text: string; delay?: number; className?: strin
 gsap.registerPlugin(ScrollTrigger);
 
 const Hero: React.FC = () => {
-  const spacerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const indexContainerRef = useRef<HTMLDivElement>(null);
   const scrollHintRef = useRef<HTMLDivElement>(null);
   const gridContainerRef = useRef<HTMLDivElement>(null);
+  const verticalLineRef = useRef<HTMLDivElement>(null);
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
 
+  const [hasClicked, setHasClicked] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
+
+  // Intro Interaction States
+  const [introClicked, setIntroClicked] = useState(false);
+  const [localIntroFinished, setLocalIntroFinished] = useState(false); // Local state for rendering
+  const { setIntroFinished } = useIntro(); // Global state for App.tsx
+
   const handleOpenProject = () => {
     setSelectedProject(PROJECTS[0]);
     setIsModalOpen(true);
+    setHasClicked(true);
   };
 
   const handleCloseModal = () => {
@@ -91,8 +100,6 @@ const Hero: React.FC = () => {
   const currentFrameRef = useRef(0);
   const [revealProgress, setRevealProgress] = useState(0);
   const [showText, setShowText] = useState(false);
-
-  const gridAnimatedRef = useRef(false);
 
   // Preload all images using createImageBitmap for performance
   useEffect(() => {
@@ -143,12 +150,12 @@ const Hero: React.FC = () => {
     };
   }, []);
 
-  // Setup canvas and ScrollTrigger
+  // Setup canvas and Click Interaction
   useEffect(() => {
-    if (!imagesLoaded || !spacerRef.current || !canvasRef.current || !gridContainerRef.current) return;
+    if (!imagesLoaded || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const context = canvas.getContext('2d', { alpha: false }); // Optimize for no alpha
+    const context = canvas.getContext('2d', { alpha: false });
     if (!context) return;
 
     // Render a specific frame
@@ -157,9 +164,6 @@ const Hero: React.FC = () => {
       const img = imagesRef.current[frameIndex];
 
       if (img) {
-        // No need to clearRect if we draw over the whole canvas
-        // context.clearRect(0, 0, canvas.width, canvas.height);
-
         const imgAspect = img.width / img.height;
         const canvasAspect = canvas.width / canvas.height;
 
@@ -181,7 +185,7 @@ const Hero: React.FC = () => {
       }
     };
 
-    // Use requestAnimationFrame for smooth rendering
+    // Render Loop
     let animationFrameId: number;
     const renderLoop = () => {
       renderFrame(currentFrameRef.current);
@@ -189,123 +193,146 @@ const Hero: React.FC = () => {
     };
     renderLoop();
 
-    // Set canvas size with debounce
+    // Resize Handler
     let resizeTimeout: ReturnType<typeof setTimeout>;
     const setCanvasSize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      // renderFrame(currentFrameRef.current); // Handled by loop
     };
-
     const handleResize = () => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(setCanvasSize, 100);
     };
-
     setCanvasSize();
     window.addEventListener('resize', handleResize);
-    // renderFrame(0); // Handled by loop
-
-    // Setup ScrollTrigger
-    ScrollTrigger.getAll().forEach(t => t.kill());
-
-    // Get all grid lines (borders)
-    const horizontalLines = gridContainerRef.current.querySelectorAll('.grid-h-line');
-    const verticalLines = gridContainerRef.current.querySelectorAll('.grid-v-line');
-
-    // Initial State for Grid
-    gsap.set([...horizontalLines, ...verticalLines], { scale: 0, opacity: 0 });
-    gsap.set(horizontalLines, { transformOrigin: 'left center' });
-    gsap.set(verticalLines, { transformOrigin: 'top center' });
-
-
-    ScrollTrigger.create({
-      trigger: spacerRef.current,
-      start: 'top top',
-      end: 'bottom bottom',
-      scrub: 0.5,
-      onUpdate: (self) => {
-        const p = self.progress;
-
-        // 1. Video Animation (0% - 60%)
-        const videoProgress = Math.min(1, p / 0.6);
-        const frameIndex = videoProgress * (frameCount - 1);
-        currentFrameRef.current = frameIndex;
-        // renderFrame(frameIndex); // Handled by loop
-
-        // 2. Grid Animation (Triggered at 60%)
-        if (p > 0.6) {
-          if (!gridAnimatedRef.current) {
-            gridAnimatedRef.current = true;
-            gridContainerRef.current!.style.opacity = '1';
-
-            // Horizontal lines stagger
-            gsap.to(horizontalLines, {
-              scale: 1,
-              opacity: 1,
-              duration: 1.5,
-              stagger: 0.1,
-              ease: "power2.out",
-              overwrite: true
-            });
-
-            // Vertical lines stagger
-            gsap.to(verticalLines, {
-              scale: 1,
-              opacity: 1,
-              duration: 1.5,
-              stagger: 0.15,
-              delay: 0.5, // Start slightly after horizontal
-              ease: "power2.out",
-              overwrite: true
-            });
-          }
-        } else if (p < 0.5) {
-          // Reset if scrolled back up significantly
-          if (gridAnimatedRef.current) {
-            gridAnimatedRef.current = false;
-            gridContainerRef.current!.style.opacity = '0';
-            gsap.to([...horizontalLines, ...verticalLines], {
-              scale: 0,
-              opacity: 0,
-              duration: 0.5,
-              overwrite: true
-            });
-          }
-        }
-
-        // 3. Index Reveal (80% - 100%)
-        if (indexContainerRef.current) {
-          if (p > 0.8) {
-            const indexProgress = (p - 0.8) / 0.2;
-            indexContainerRef.current.style.opacity = Math.min(1, indexProgress * 2).toString();
-            // indexContainerRef.current.style.transform = `translateY(${(1 - indexProgress) * 20}px)`; // Removed translation for cleaner reveal
-            indexContainerRef.current.style.pointerEvents = 'auto';
-
-            // Pass progress to ProjectReveal (0 to 1 as we scroll from 80% to 100%)
-            setRevealProgress(indexProgress);
-          } else {
-            indexContainerRef.current.style.opacity = '0';
-            indexContainerRef.current.style.pointerEvents = 'none';
-            setRevealProgress(0);
-          }
-        }
-
-        // Scroll Hint fade out
-        if (scrollHintRef.current) {
-          const opacity = 1 - (p * 10);
-          scrollHintRef.current.style.opacity = Math.max(0, opacity).toString();
-          scrollHintRef.current.style.pointerEvents = opacity <= 0 ? 'none' : 'auto';
-        }
-      },
-    });
 
     return () => {
-      ScrollTrigger.getAll().forEach(t => t.kill());
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
   }, [imagesLoaded]);
+
+  // Handle Grid Animation when Intro Finishes
+  useEffect(() => {
+    if (localIntroFinished && gridContainerRef.current) {
+      gridContainerRef.current.style.opacity = '1';
+      const horizontalLines = gridContainerRef.current.querySelectorAll('.grid-h-line');
+      const verticalLines = gridContainerRef.current.querySelectorAll('.grid-v-line');
+
+      gsap.to(horizontalLines, {
+        scale: 1, opacity: 1, duration: 1.5, stagger: 0.1, ease: "power2.out"
+      });
+      gsap.to(verticalLines, {
+        scale: 1, opacity: 1, duration: 1.5, stagger: 0.15, delay: 0.5, ease: "power2.out"
+      });
+    }
+  }, [localIntroFinished]);
+
+  // Animate Vertical Line on Text Trigger
+  useEffect(() => {
+    if (showText && verticalLineRef.current) {
+      gsap.to(verticalLineRef.current, {
+        scaleY: 1,
+        opacity: 1,
+        duration: 1.0,
+        ease: "power2.out"
+      });
+    }
+  }, [showText]);
+
+  // Click Handler for Intro Animation
+  const handleIntroClick = () => {
+    if (introClicked || !imagesLoaded) return;
+    setIntroClicked(true);
+
+    // 1. Animate Video Frames (Slower Playback)
+    const videoObj = { frame: 0 };
+    gsap.to(videoObj, {
+      frame: frameCount - 1,
+      duration: 3.0, // Slowed down from 1.5s to 3.0s
+      ease: "power2.inOut",
+      onUpdate: () => {
+        currentFrameRef.current = videoObj.frame;
+      },
+      onComplete: () => {
+        // Video finished
+      }
+    });
+
+    // 2. Zoom In Effect (Scale Canvas)
+    gsap.to(canvasRef.current, {
+      scale: 1.2, // Reduced zoom from 3 to 1.2 (Just enough to feel "entering" but not pixelated)
+      duration: 3.0, // Match video duration
+      ease: "power3.inOut",
+      delay: 0
+    });
+
+    // 3. Fade Out Scroll Hint
+    if (scrollHintRef.current) {
+      gsap.to(scrollHintRef.current, {
+        opacity: 0,
+        duration: 0.5
+      });
+    }
+
+    // 4. Reveal Project Section (After Zoom)
+    setTimeout(() => {
+      setLocalIntroFinished(true);
+      setIntroFinished(true); // Notify App to hide dust
+      setRevealProgress(1); // Force reveal to 100% immediately or animate it
+
+    }, 3000); // Match duration exactly
+  };
+
+  // Lock Body Scroll when Intro Finishes
+  useEffect(() => {
+    if (localIntroFinished) {
+      // Apply overflow hidden to prevent scrollbars, but allow event propagation for future page-turn logic
+      const styles = {
+        overflow: 'hidden',
+        height: '100%',
+        overscrollBehavior: 'none'
+      };
+
+      Object.assign(document.body.style, styles);
+      Object.assign(document.documentElement.style, styles);
+    } else {
+      const styles = {
+        overflow: '',
+        height: '',
+        overscrollBehavior: ''
+      };
+
+      Object.assign(document.body.style, styles);
+      Object.assign(document.documentElement.style, styles);
+    }
+    return () => {
+      const styles = {
+        overflow: '',
+        height: '',
+        overscrollBehavior: ''
+      };
+      Object.assign(document.body.style, styles);
+      Object.assign(document.documentElement.style, styles);
+    };
+  }, [localIntroFinished]);
+
+  // Calculate Text Delays
+  const titleText = PROJECTS[0].title;
+  const descText = PROJECTS[0].description;
+  const body1Text = "A digital exploration of memory and form. This project delves into the intersection of analog textures and digital interactivity, creating a space where the user becomes part of the narrative.";
+  const body2Text = "Through the layering of ink, paper, and code, we bridge the gap between the tangible and the virtual. Every interaction leaves a mark, every scroll reveals a new layer of depth.";
+
+  const charDuration = 0.02; // Faster typing speed
+  const titleDuration = titleText.length * charDuration;
+  const descDuration = descText.length * charDuration;
+  const body1Duration = body1Text.length * charDuration;
+
+  const titleDelay = 0;
+  const descDelay = titleDelay + titleDuration + 0.2; // Start after title + buffer
+  const body1Delay = descDelay + descDuration + 0.3; // Start after description + buffer
+  const body2Delay = body1Delay + body1Duration + 0.3; // Start after body1 + buffer
+
 
   return (
     <>
@@ -319,80 +346,138 @@ const Hero: React.FC = () => {
         }
       `}</style>
 
-      {/* Fixed Background Layer */}
-      <div className="fixed inset-0 w-full h-full z-1">
-        {/* Local background removed to use global background */}
+      {/* Persistent Background Canvas */}
+      <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
         <canvas
           ref={canvasRef}
           className="absolute top-0 left-0 w-full h-full object-cover"
-          style={{ willChange: 'contents, transform' }} // Hint to browser
+          style={{ willChange: 'contents, transform' }}
         />
-
-        {/* Scroll Hint Text (Initial View) */}
-        <div
-          ref={scrollHintRef}
-          className="absolute inset-0 flex flex-col items-center justify-center z-40 pointer-events-none"
-        >
-          <div className="mt-32 flex flex-col items-center gap-4 animate-pulse-custom">
-            <span className="font-serif tracking-[0.2em] text-sm uppercase">Scroll to Open</span>
-            <ChevronDown className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Grid Overlay - Responsive CSS Grid */}
-        <div
-          ref={gridContainerRef}
-          className="absolute inset-0 w-full h-full z-20 pointer-events-none mix-blend-multiply opacity-0 flex items-center justify-center p-4 md:p-12 lg:p-24"
-        >
-
-        </div>
-
-        {/* Index Content (End View) */}
-        <div
-          ref={indexContainerRef}
-          className="absolute inset-0 flex flex-col items-center justify-center gap-8 z-30 opacity-0 pointer-events-none p-4"
-        >
-          <div className="w-full max-w-4xl flex justify-center">
-            <ProjectReveal
-              progress={revealProgress}
-              onOpenProject={handleOpenProject}
-              resetKey={resetKey}
-              onTextTrigger={() => setShowText(true)}
-              onVideoReset={() => setShowText(false)}
-            />
-          </div>
-
-          <div className="w-full text-ink flex flex-col justify-center items-center text-center -mt-24 relative z-40 min-h-[150px]">
-            {showText && (
-              <>
-                <TypewriterText
-                  text={PROJECTS[0].title}
-                  className="text-5xl font-serif mb-6 block"
-                />
-                <TypewriterText
-                  text={PROJECTS[0].description}
-                  delay={1.5} // Start after title finishes roughly
-                  className="font-sans text-sm tracking-widest uppercase opacity-70 block"
-                />
-              </>
-            )}
-          </div>
-        </div>
-
-        {!imagesLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-paper z-50">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-2 border-ink/10 border-t-accent rounded-full animate-spin"></div>
-              <span className="text-xs font-sans tracking-widest text-ink/50">
-                LOADING FRAMES... {loadProgress}%
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Scroll Spacer */}
-      <div ref={spacerRef} className="relative w-full h-[500vh] pointer-events-none"></div>
+      {/* Intro Click Layer (Visible only during intro) */}
+      {!localIntroFinished && (
+        <div
+          className="fixed inset-0 w-full h-full z-50 cursor-pointer"
+          onClick={handleIntroClick}
+        >
+          {/* Hover Trigger Area (Restricted to Book Area) */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[400px] md:w-[400px] md:h-[500px] z-50" // Centered book area
+            onMouseEnter={() => {
+              if (!introClicked && canvasRef.current) {
+                gsap.to(canvasRef.current, { scale: 1.05, duration: 0.5, ease: "power2.out" });
+              }
+            }}
+            onMouseLeave={() => {
+              if (!introClicked && canvasRef.current) {
+                gsap.to(canvasRef.current, { scale: 1, duration: 0.5, ease: "power2.out" });
+              }
+            }}
+          ></div>
+
+          <div
+            ref={scrollHintRef}
+            className="absolute inset-0 flex flex-col items-center justify-center z-40 pointer-events-none"
+          >
+            <div className="mt-32 flex flex-col items-center gap-4 animate-pulse-custom">
+              <span className="font-serif tracking-[0.2em] text-sm uppercase">Click to Enter</span>
+            </div>
+          </div>
+
+          {!imagesLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#F5F0E6] z-50 pointer-events-none transition-opacity duration-500">
+              <div className="flex flex-col items-center gap-6">
+                {/* Minimal Loading Spinner */}
+                <div className="w-16 h-16 border-[1px] border-ink/10 border-t-ink rounded-full animate-spin duration-[1.5s]"></div>
+
+                {/* Styled Loading Text */}
+                <div className="flex flex-col items-center gap-2">
+                  <span className="font-serif text-lg text-ink tracking-widest uppercase">Loading</span>
+                  <span className="font-sans text-[10px] text-ink/40 tracking-[0.2em]">{loadProgress}%</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Main Content Layer (Visible after Intro) */}
+      {localIntroFinished && (
+        <>
+          {/* Fixed Background (Grid) */}
+          <div className="fixed inset-0 w-full h-full z-1 pointer-events-none">
+            <div
+              ref={gridContainerRef}
+              className="absolute inset-0 w-full h-full mix-blend-multiply opacity-0 flex items-center justify-center p-4 md:p-12 lg:p-24"
+            >
+              {/* Adding Grid Lines explicitly for safety */}
+              <div className="absolute inset-0 border-t border-b border-gray-300 grid-h-line scale-x-0 origin-left"></div>
+              <div className="absolute inset-0 border-l border-r border-gray-300 grid-v-line scale-y-0 origin-top"></div>
+            </div>
+          </div>
+
+          {/* Content Area - Fixed Height, No Scroll */}
+          <div className="relative w-full h-screen z-10 overflow-hidden">
+            <div className="w-full h-full flex items-center justify-center">
+              <div
+                ref={indexContainerRef}
+                className="absolute inset-0 flex flex-col md:flex-row items-start justify-center gap-8 z-30 p-4 md:p-12 pt-24 md:pt-32"
+                style={{ opacity: 1, pointerEvents: 'auto' }}
+              >
+                {/* Left: Project Reveal (Larger) */}
+                <div className="w-full md:w-2/3 flex justify-center items-start pointer-events-auto relative">
+                  <ProjectReveal
+                    progress={1}
+                    onOpenProject={handleOpenProject}
+                    resetKey={resetKey}
+                    onTextTrigger={() => setShowText(true)}
+                    onVideoReset={() => setShowText(false)}
+                    onVideoEnd={() => setVideoEnded(true)}
+                  />
+                </div>
+
+                {/* Vertical Divider Line */}
+                <div
+                  ref={verticalLineRef}
+                  className="hidden md:block w-[1px] bg-ink/20 h-full origin-top scale-y-0 opacity-0"
+                ></div>
+
+                {/* Right: Text Content */}
+                <div className="w-full md:w-1/3 text-ink flex flex-col justify-start items-start text-left relative z-40 min-h-[150px] pl-4 md:pl-8 pr-4 md:pr-12 pt-32"> {/* Added pt-32 for visual alignment */}
+                  {showText && (
+                    <>
+                      <TypewriterText
+                        text={titleText}
+                        className="text-3xl md:text-5xl lg:text-6xl font-serif mb-4 md:mb-8 block break-words" // Responsive text
+                      />
+                      <TypewriterText
+                        text={descText}
+                        delay={descDelay}
+                        className="font-sans text-xs md:text-sm tracking-widest uppercase opacity-70 block mb-8 break-words"
+                      />
+
+                      {/* Body Content */}
+                      <div className="font-serif text-sm md:text-base lg:text-lg leading-relaxed opacity-80 w-full whitespace-normal break-words max-w-full md:max-w-md"> {/* Responsive max-w */}
+                        <TypewriterText
+                          text={body1Text}
+                          delay={body1Delay}
+                          className="block mb-4"
+                        />
+                        <TypewriterText
+                          text={body2Text}
+                          delay={body2Delay}
+                          className="block"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <ProjectModal
         isOpen={isModalOpen}

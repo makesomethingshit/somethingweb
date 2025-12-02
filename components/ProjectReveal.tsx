@@ -18,6 +18,7 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
     const sketchRef = useRef<HTMLImageElement>(null);
     const colorRef = useRef<HTMLImageElement>(null);
     const textTriggeredRef = useRef(false);
+    const hasPlayedRef = useRef(false);
 
     // Off-screen canvases
     const contentCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -44,7 +45,7 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         if (resetKey > 0) {
             setIsTransitioning(false);
             gsap.to(spotRadius, {
-                current: 130,
+                current: 90,
                 duration: 1.0,
                 ease: "power2.out"
             });
@@ -168,18 +169,18 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         textureRef.current = texture;
     };
 
-    // Video Scrubbing
     // Video Auto-Play Logic
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
 
-        // Set playback rate to 0.7x (slower)
-        video.playbackRate = 0.7;
+        // Set playback rate to 1.5x (faster)
+        video.playbackRate = 1.5;
 
         if (progress > 0.5) {
-            // Play if visible
-            if (video.paused) {
+            // Play if visible and hasn't played yet
+            if (video.paused && !hasPlayedRef.current) {
+                hasPlayedRef.current = true; // Mark as played
                 video.play().catch(() => {
                     // Handle autoplay policy issues
                 });
@@ -190,6 +191,7 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
                 video.pause();
                 video.currentTime = 0;
                 textTriggeredRef.current = false;
+                hasPlayedRef.current = false; // Reset played state
                 if (onVideoReset) onVideoReset();
             }
         }
@@ -272,12 +274,12 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
                 drawW = canvas.width * scale;
                 drawH = (canvas.width / imgAspect) * scale;
                 offsetX = (canvas.width - drawW) / 2;
-                offsetY = (canvas.height - drawH) / 2;
+                offsetY = 0; // Force Top Alignment
             } else {
                 drawH = canvas.height * scale;
                 drawW = (canvas.height * imgAspect) * scale;
                 offsetX = (canvas.width - drawW) / 2;
-                offsetY = (canvas.height - drawH) / 2;
+                offsetY = 0; // Force Top Alignment
             }
 
             // --- STEP 1: Compose Content (Sketch + Spot) ---
@@ -390,33 +392,58 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         return () => cancelAnimationFrame(animationFrameId);
     }, [isHovering, mousePos, isTransitioning, progress]);
 
-    const handleMouseEnter = () => {
-        setIsHovering(true);
-        // Animate spot from 0 to base size (130)
-        gsap.to(spotRadius, {
-            current: 130, // Reverted to original size
-            duration: 0.5,
-            ease: "back.out(1.7)"
-        });
-    };
+    // Global Mouse Move Listener for robust interaction
+    useEffect(() => {
+        const handleGlobalMouseMove = (e: MouseEvent) => {
+            if (!canvasRef.current || progress <= 0.5) return;
 
-    const handleMouseLeave = () => {
-        setIsHovering(false);
-        // Animate spot back to 0
-        gsap.to(spotRadius, {
-            current: 0,
-            duration: 0.3,
-            ease: "power2.in"
-        });
-    };
+            const rect = canvasRef.current.getBoundingClientRect();
 
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!canvasRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const scaleX = canvasRef.current.width / rect.width;
-        const scaleY = canvasRef.current.height / rect.height;
-        setMousePos({ x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY });
-    };
+            // Check if mouse is inside the canvas bounds
+            const isInside =
+                e.clientX >= rect.left &&
+                e.clientX <= rect.right &&
+                e.clientY >= rect.top &&
+                e.clientY <= rect.bottom;
+
+            if (isInside) {
+                setIsHovering(true);
+                const scaleX = canvasRef.current.width / rect.width;
+                const scaleY = canvasRef.current.height / rect.height;
+                setMousePos({
+                    x: (e.clientX - rect.left) * scaleX,
+                    y: (e.clientY - rect.top) * scaleY
+                });
+
+                // Animate spot to base size if not already
+                if (spotRadius.current === 0) {
+                    gsap.to(spotRadius, {
+                        current: 90,
+                        duration: 0.2,
+                        ease: "back.out(1.7)"
+                    });
+                }
+            } else {
+                setIsHovering(false);
+                // Animate spot back to 0
+                if (spotRadius.current > 0 && !isTransitioning) {
+                    gsap.to(spotRadius, {
+                        current: 0,
+                        duration: 0.3,
+                        ease: "power2.in"
+                    });
+                }
+            }
+        };
+
+        window.addEventListener('mousemove', handleGlobalMouseMove);
+        return () => {
+            window.removeEventListener('mousemove', handleGlobalMouseMove);
+        };
+    }, [progress, isTransitioning]);
+
+    // Removed local handleMouseEnter/Leave/Move as global listener handles it
+    // Removed auto-focus useEffect
 
     const handleClick = (e: React.MouseEvent) => {
         if (isTransitioning || !canvasRef.current) return;
@@ -440,14 +467,14 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         // Animate Spot Radius (Expand to fill screen with color)
         gsap.to(spotRadius, {
             current: 3000,
-            duration: 3.0, // Adjusted duration
-            ease: "power2.inOut" // Reverted to original easing for better feel
+            duration: 1.5, // Faster duration
+            ease: "power2.inOut"
         });
 
         // Animate Ink Expansion (Bleed ink to fill screen)
         gsap.to(maskExpansion, {
             current: 50,
-            duration: 3.0, // Adjusted duration
+            duration: 1.5, // Faster duration
             ease: "power2.inOut",
             onComplete: onOpenProject
         });
@@ -457,9 +484,6 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         <div
             ref={containerRef}
             className="relative max-w-[1600px] w-full aspect-[3/2] cursor-pointer mx-auto overflow-hidden rounded-sm"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onMouseMove={handleMouseMove}
             onClick={handleClick}
         >
             {/* SVG Filter Removed for Performance */}

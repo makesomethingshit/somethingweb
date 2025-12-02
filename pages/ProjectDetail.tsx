@@ -35,34 +35,34 @@ const ProjectDetail: React.FC = () => {
                 ></div>
 
                 {/* Red Margin Line */}
-                <div className="absolute top-0 left-12 md:left-24 w-[1px] h-full bg-red-300/50 z-0"></div>
+                <div className="absolute top-0 left-6 md:left-12 lg:left-24 w-[1px] h-full bg-red-300/50 z-0"></div>
 
                 {/* Content Area */}
-                <div className="relative z-10 p-12 md:p-24 pt-16">
+                <div className="relative z-10 p-6 md:p-12 lg:p-24 pt-16">
 
                     {/* Handwritten-style Title */}
-                    <div className="mb-12 relative">
-                        <h1 className="font-serif text-5xl md:text-6xl text-ink relative inline-block">
+                    <div className="mb-8 md:mb-12 relative">
+                        <h1 className="font-serif text-3xl md:text-5xl lg:text-6xl text-ink relative inline-block">
                             Project 01
                             {/* Underline highlight */}
-                            <span className="absolute -bottom-2 left-0 w-full h-3 bg-yellow-200/50 -rotate-1 -z-10 rounded-sm"></span>
+                            <span className="absolute -bottom-2 left-0 w-full h-2 md:h-3 bg-yellow-200/50 -rotate-1 -z-10 rounded-sm"></span>
                         </h1>
-                        <div className="font-mono text-sm text-ink/40 mt-2 ml-1">Date: 2024. 12. 01</div>
+                        <div className="font-mono text-xs md:text-sm text-ink/40 mt-2 ml-1">Date: 2024. 12. 01</div>
                     </div>
 
                     {/* "Pasted" Image */}
-                    <div className="relative mb-12 rotate-1 hover:rotate-0 transition-transform duration-500 ease-out origin-top-left inline-block">
-                        <div className="p-3 bg-white shadow-lg border border-gray-100">
-                            <div className="w-full max-w-2xl aspect-video bg-gray-200 overflow-hidden relative">
+                    <div className="relative mb-8 md:mb-12 rotate-1 hover:rotate-0 transition-transform duration-500 ease-out origin-top-left inline-block w-full">
+                        <div className="p-2 md:p-3 bg-white shadow-lg border border-gray-100">
+                            <div className="w-full aspect-video bg-gray-200 overflow-hidden relative">
                                 <img src="/projects/project1_image.png" alt="Project 1" className="w-full h-full object-cover" />
                                 {/* Tape effect */}
-                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-32 h-8 bg-white/40 backdrop-blur-sm rotate-3 shadow-sm border-l border-r border-white/60"></div>
+                                <div className="absolute -top-3 md:-top-4 left-1/2 -translate-x-1/2 w-24 md:w-32 h-6 md:h-8 bg-white/40 backdrop-blur-sm rotate-3 shadow-sm border-l border-r border-white/60"></div>
                             </div>
                         </div>
                     </div>
 
                     {/* Text Content aligned to lines */}
-                    <div className="prose prose-lg max-w-none font-serif text-ink/80 leading-[32px]">
+                    <div className="prose prose-sm md:prose-lg max-w-none font-serif text-ink/80 leading-[32px]">
                         <p className="mb-0">
                             This is the detailed description of Project 01. The interactive thumbnail led you here.
                             We designed this page to look like a research note. The lines guide the text,

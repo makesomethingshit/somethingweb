@@ -37,7 +37,7 @@ const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => {
                         </svg>
                     </div>
 
-                    <div className="w-full max-w-[1820px] px-[50px] flex justify-between items-start h-[80vh]">
+                    <div className="w-full max-w-[1820px] px-6 md:px-[50px] flex justify-between items-start h-[80vh]">
 
                         {/* Left Page: Info */}
                         <div className="hidden md:flex w-1/2 h-full flex-col justify-between pl-[50px] pr-[50px] border-r border-ink/10">
@@ -58,7 +58,7 @@ const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => {
 
                         {/* Right Page: Menu Items */}
                         <div className="w-full md:w-1/2 h-full flex flex-col justify-center pl-0 md:pl-[100px]">
-                            <ul className="space-y-12">
+                            <ul className="space-y-8 md:space-y-12">
                                 {[
                                     { id: '00', title: 'Home', desc: 'Back to Cover', path: '/' },
                                     { id: '01', title: 'Work', desc: 'Selected Projects', path: '/work' },
@@ -72,11 +72,11 @@ const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => {
                                         className="group cursor-pointer"
                                     >
                                         <Link to={item.path} onClick={onClose} className="block">
-                                            <div className="flex items-baseline gap-8 mb-2">
-                                                <span className="font-sans text-sm text-accent font-bold tracking-widest">
+                                            <div className="flex items-baseline gap-4 md:gap-8 mb-2">
+                                                <span className="font-sans text-xs md:text-sm text-accent font-bold tracking-widest">
                                                     {item.id}
                                                 </span>
-                                                <h3 className="font-serif text-5xl md:text-6xl text-ink group-hover:text-accent transition-colors duration-300 italic">
+                                                <h3 className="font-serif text-4xl md:text-6xl text-ink group-hover:text-accent transition-colors duration-300 italic">
                                                     {item.title}
                                                 </h3>
                                             </div>

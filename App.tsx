@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { MemoryRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -15,8 +14,10 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AIModal from './components/AIModal';
 import InteractiveBackground from './components/InteractiveBackground';
+import FloatingTypography from './components/FloatingTypography';
 import Navigation from './components/Navigation';
 import GridOverlay from './components/GridOverlay';
+import { useIntro } from './context/IntroContext';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -128,6 +129,8 @@ const AnimatedRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const { introFinished } = useIntro();
+
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -168,7 +171,21 @@ const App: React.FC = () => {
         {/* Subtle Background */}
         <div className="fixed inset-0 pointer-events-none opacity-40 z-0 bg-[url('/frames/intro_book_video00121.jpg')] bg-cover bg-center mix-blend-multiply"></div>
         <InteractiveBackground />
-        <DustOverlay />
+
+        <AnimatePresence>
+          {!introFinished && (
+            <motion.div
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1 }}
+              className="fixed inset-0 pointer-events-none z-10"
+            >
+              <FloatingTypography />
+              <DustOverlay />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <Navigation />
 
         {/* Navbar Removed */}

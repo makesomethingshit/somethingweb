@@ -25,7 +25,7 @@ const Projects: React.FC = () => {
             {PROJECTS.map((project, index) => (
                 <section key={project.id || index} className="min-h-screen flex flex-col md:flex-row items-center justify-center gap-4 md:gap-12 border-b border-ink/10 last:border-b-0 py-12 md:py-0">
                     {/* Left Page (Visual) */}
-                    <div className="w-full md:w-[45%] h-[40vh] md:h-[60vh] relative overflow-hidden flex items-center justify-end bg-paper">
+                    <div className="w-full md:w-[45%] h-[30vh] md:h-[60vh] relative overflow-hidden flex items-center justify-end bg-paper">
                         <div className="relative w-full max-w-lg h-full group cursor-pointer" onClick={() => handleOpenModal(project)}>
                             <div className="absolute inset-0 bg-ink/5 z-10 group-hover:bg-ink/0 transition-colors duration-700"></div>
                             <img
@@ -51,13 +51,13 @@ const Projects: React.FC = () => {
                                 ))}
                             </div>
 
-                            <h3 className="font-serif text-4xl md:text-5xl text-ink leading-tight mb-6 group cursor-pointer hover:text-accent transition-colors" onClick={() => handleOpenModal(project)}>
+                            <h3 className="font-serif text-3xl md:text-5xl text-ink leading-tight mb-6 group cursor-pointer hover:text-accent transition-colors" onClick={() => handleOpenModal(project)}>
                                 {project.title}
                             </h3>
 
                             <div className="w-12 h-[1px] bg-accent mb-8"></div>
 
-                            <p className="font-serif-kr text-sub font-light leading-loose text-sm md:text-base mb-12 break-keep line-clamp-4">
+                            <p className="font-serif-kr text-sub font-light leading-loose text-xs md:text-base mb-12 break-keep line-clamp-4">
                                 {project.description}
                             </p>
 
