@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProjectReveal from './ProjectReveal';
+import BookLoader from './BookLoader';
 import { PROJECTS } from '../constants';
 import { Project } from '../types';
 import ProjectModal from './ProjectModal';
@@ -389,7 +390,7 @@ const Hero: React.FC = () => {
             <div className="absolute inset-0 flex items-center justify-center bg-[#F5F0E6] z-50 pointer-events-none transition-opacity duration-500">
               <div className="flex flex-col items-center gap-6">
                 {/* Minimal Loading Spinner */}
-                <div className="w-16 h-16 border-[1px] border-ink/10 border-t-ink rounded-full animate-spin duration-[1.5s]"></div>
+                <BookLoader />
 
                 {/* Styled Loading Text */}
                 <div className="flex flex-col items-center gap-2">

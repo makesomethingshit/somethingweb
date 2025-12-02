@@ -24,6 +24,11 @@
         *   Framer Motion을 활용한 부드러운 등장/퇴장 애니메이션.
         *   Home, Work, Profile 등 주요 섹션으로의 이동 기능 제공.
 
+3.  **로딩 애니메이션 교체 (Loading Animation Replacement)**
+    *   **Concept**: 기존의 회전하는 스피너를 '책이 넘어가는' 애니메이션으로 교체하여 사이트의 아이덴티티를 강화했습니다.
+    *   **Implementation**: `BookLoader` 컴포넌트를 새로 제작하고, Framer Motion의 `rotateY`를 활용하여 3D 페이지 넘김 효과를 구현했습니다.
+    *   **Refinement**: 단순 회전이 아닌, 실제 책장이 넘어가는 듯한 입체적인 움직임으로 디테일을 높였습니다.
+
 ---
 
 ## 📅 2025.11.29 작업 로그 (Work Log)
