@@ -1,93 +1,105 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Send } from 'lucide-react';
 
 const Contact: React.FC = () => {
-  const [formState, setFormState] = useState({ name: '', email: '', message: '' });
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert("문의가 접수되었습니다.");
-    setFormState({ name: '', email: '', message: '' });
-  };
+    const [formState, setFormState] = useState({ name: '', email: '', message: '' });
 
-  return (
-    <section className="min-h-[80vh] flex items-center py-20 relative z-20">
-      <div className="container mx-auto px-6 max-w-4xl">
-        <div className="text-center mb-20">
-          <h2 className="font-serif text-5xl md:text-6xl text-ink mb-6">Inquiry</h2>
-          <p className="text-sub font-serif-kr font-light">
-            함께 쓰고 싶은 이야기.<br/>
-            세상을 향한 새로운 번역.
-          </p>
-        </div>
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        alert("문의가 접수되었습니다.");
+        setFormState({ name: '', email: '', message: '' });
+    };
 
-        <motion.div 
-             initial={{ opacity: 0, y: 30 }}
-             animate={{ opacity: 1, y: 0 }}
-             className="bg-paper p-10 md:p-16 shadow-[0_0_40px_rgba(0,0,0,0.03)] border border-ink/5"
-        >
-            <form onSubmit={handleSubmit} className="space-y-12">
-              <div className="grid md:grid-cols-2 gap-12">
-                  <div className="group">
-                    <label htmlFor="name" className="block text-xs text-sub uppercase tracking-widest mb-3">Name</label>
-                    <input
-                      type="text"
-                      id="name"
-                      required
-                      value={formState.name}
-                      onChange={(e) => setFormState({...formState, name: e.target.value})}
-                      className="w-full bg-transparent border-b border-ink/20 py-3 text-ink font-serif focus:outline-none focus:border-accent transition-colors placeholder-ink/20 text-lg"
-                      placeholder="성함"
-                    />
-                  </div>
-                  <div className="group">
-                    <label htmlFor="email" className="block text-xs text-sub uppercase tracking-widest mb-3">Email</label>
-                    <input
-                      type="email"
-                      id="email"
-                      required
-                      value={formState.email}
-                      onChange={(e) => setFormState({...formState, email: e.target.value})}
-                      className="w-full bg-transparent border-b border-ink/20 py-3 text-ink font-serif focus:outline-none focus:border-accent transition-colors placeholder-ink/20 text-lg"
-                      placeholder="이메일 주소"
-                    />
-                  </div>
-              </div>
-              <div className="group">
-                <label htmlFor="message" className="block text-xs text-sub uppercase tracking-widest mb-3">Message</label>
-                <textarea
-                  id="message"
-                  required
-                  rows={4}
-                  value={formState.message}
-                  onChange={(e) => setFormState({...formState, message: e.target.value})}
-                  className="w-full bg-transparent border-b border-ink/20 py-3 text-ink font-serif focus:outline-none focus:border-accent transition-colors resize-none placeholder-ink/20 text-lg"
-                  placeholder="프로젝트 의뢰 및 협업 제안"
-                ></textarea>
-              </div>
-              <div className="text-center">
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center space-x-3 bg-ink text-white px-10 py-4 hover:bg-accent transition-colors duration-300"
+    // Get current date
+    const today = new Date();
+    const dateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    return (
+        <section className="min-h-[80vh] flex items-center justify-center py-32 relative z-20 bg-paper">
+            <div className="container mx-auto px-6 md:px-12 max-w-5xl">
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="relative"
                 >
-                  <span className="text-sm font-sans uppercase tracking-widest">Send Message</span>
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </form>
-            
-            <div className="mt-16 text-center space-y-2">
-                <p className="flex items-center justify-center space-x-2 text-sub font-serif">
-                    <Mail size={16} className="text-accent" />
-                    <span>hello@junsoo.motion</span>
-                </p>
+                    {/* Header: Meta Info */}
+                    <div className="flex justify-between items-end border-b border-ink/10 pb-6 mb-12">
+                        <div className="flex flex-col gap-2">
+                            <span className="font-sans text-xs uppercase tracking-[0.2em] text-ink/40">Correspondence</span>
+                            <span className="font-serif text-xl italic text-ink">To. Junsoo</span>
+                        </div>
+                        <div className="text-right">
+                            <span className="font-mono text-xs text-ink/40 tracking-widest uppercase">{dateString}</span>
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-16">
+
+                        {/* Message Body - The Hero */}
+                        <div className="group relative">
+                            <textarea
+                                id="message"
+                                required
+                                rows={1}
+                                value={formState.message}
+                                onChange={(e) => {
+                                    setFormState({ ...formState, message: e.target.value });
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                }}
+                                className="w-full bg-transparent border-none p-0 text-3xl md:text-5xl font-serif leading-tight resize-none placeholder-ink/10 focus:ring-0 focus:outline-none transition-all"
+                                placeholder="Start typing your message..."
+                            ></textarea>
+                        </div>
+
+                        {/* Footer: Inputs & Action */}
+                        <div className="grid md:grid-cols-[1fr_1fr_auto] gap-12 items-end border-t border-ink/10 pt-12">
+
+                            {/* Name */}
+                            <div className="group relative">
+                                <input
+                                    type="text"
+                                    id="name"
+                                    required
+                                    value={formState.name}
+                                    onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                                    className="w-full bg-transparent border-b border-ink/10 py-2 text-lg font-serif focus:border-ink transition-colors focus:outline-none placeholder-ink/20"
+                                    placeholder="Your Name"
+                                />
+                            </div>
+
+                            {/* Email */}
+                            <div className="group relative">
+                                <input
+                                    type="email"
+                                    id="email"
+                                    required
+                                    value={formState.email}
+                                    onChange={(e) => setFormState({ ...formState, email: e.target.value })}
+                                    className="w-full bg-transparent border-b border-ink/10 py-2 text-lg font-serif focus:border-ink transition-colors focus:outline-none placeholder-ink/20"
+                                    placeholder="Your Email"
+                                />
+                            </div>
+
+                            {/* Submit Button */}
+                            <button
+                                type="submit"
+                                className="group flex items-center gap-4 px-8 py-4 bg-ink text-paper hover:bg-accent transition-colors duration-500"
+                            >
+                                <span className="font-sans text-xs uppercase tracking-[0.2em]">Send</span>
+                                <Send className="w-4 h-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                            </button>
+                        </div>
+
+                    </form>
+                </motion.div>
             </div>
-        </motion.div>
-      </div>
-    </section>
-  );
+        </section>
+    );
 };
 
 export default Contact;

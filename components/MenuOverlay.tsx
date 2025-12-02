@@ -62,8 +62,7 @@ const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => {
                                 {[
                                     { id: '00', title: 'Home', desc: 'Back to Cover', path: '/' },
                                     { id: '01', title: 'Work', desc: 'Selected Projects', path: '/work' },
-                                    { id: '02', title: 'Profile', desc: 'Experience & Skills', path: '/about' },
-                                    { id: '03', title: 'Contact', desc: 'Get in Touch', path: '/contact' }
+                                    { id: '02', title: 'Profile', desc: 'Experience & Skills', path: '/about' }
                                 ].map((item, index) => (
                                     <motion.li
                                         key={item.id}

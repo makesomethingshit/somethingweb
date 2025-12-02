@@ -31,13 +31,14 @@ const ScrollToTop = () => {
 
 // Dust Overlay Component
 const DustOverlay = () => {
-  const [opacity, setOpacity] = React.useState(1);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
+      if (!videoRef.current) return;
       // Fade out over the first 500px of scroll
       const newOpacity = Math.max(0, 1 - window.scrollY / 500);
-      setOpacity(newOpacity);
+      videoRef.current.style.opacity = newOpacity.toString();
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -46,16 +47,15 @@ const DustOverlay = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  if (opacity === 0) return null;
-
   return (
     <video
+      ref={videoRef}
       autoPlay
       loop
       muted
       playsInline
       className="fixed top-0 left-0 w-full h-full object-cover pointer-events-none z-[9999] mix-blend-screen"
-      style={{ opacity }}
+      style={{ opacity: 1, willChange: 'opacity' }} // Initial opacity 1, optimized
     >
       <source src="/overlays/dust.mp4" type="video/mp4" />
     </video>

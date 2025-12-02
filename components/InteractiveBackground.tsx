@@ -20,9 +20,10 @@ const InteractiveBackground: React.FC = () => {
         style={{
           rotateX,
           rotateY,
-          opacity
+          opacity,
+          willChange: "transform, opacity"
         }}
-        className="relative w-[60vw] h-[60vw] md:w-[500px] md:h-[500px] preserve-3d"
+        className="relative w-[60vw] h-[60vw] md:w-[500px] md:h-[500px] preserve-3d backface-hidden"
       >
 
         {/* Outer Orbit Ring */}
@@ -55,10 +56,10 @@ const InteractiveBackground: React.FC = () => {
           <div className="absolute w-full h-full border border-ink/10 bg-ink/[0.01] rotate-x-[-90] translate-z-[50px]" /> {/* Bottom */}
         </motion.div>
 
-      </motion.div>
+      </motion.div >
 
       {/* Static Background Texture/Noise Overlay removed to show global background */}
-    </div>
+    </div >
   );
 };
 

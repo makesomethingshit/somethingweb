@@ -6,14 +6,18 @@ interface ProjectRevealProps {
     progress: number;
     onOpenProject: () => void;
     resetKey: number;
+    onVideoEnd?: () => void;
+    onVideoReset?: () => void;
+    onTextTrigger?: () => void;
 }
 
-const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, resetKey }) => {
+const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, resetKey, onVideoEnd, onVideoReset, onTextTrigger }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const sketchRef = useRef<HTMLImageElement>(null);
     const colorRef = useRef<HTMLImageElement>(null);
+    const textTriggeredRef = useRef(false);
 
     // Off-screen canvases
     const contentCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -26,8 +30,8 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
     const textureRef = useRef<WebGLTexture | null>(null);
     const positionBufferRef = useRef<WebGLBuffer | null>(null);
 
-    // Spot Radius for Hover/Click
-    const spotRadius = useRef(130);
+    // Spot Radius for Hover/Click (Start at 0 for animation)
+    const spotRadius = useRef(0);
     // Mask Expansion (Ink Bleed) for Click Transition
     const maskExpansion = useRef(1.0);
 
@@ -165,14 +169,58 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
     };
 
     // Video Scrubbing
+    // Video Auto-Play Logic
     useEffect(() => {
         const video = videoRef.current;
-        if (!video || !Number.isFinite(video.duration)) return;
-        const targetTime = Math.min(video.duration, (progress * 1.2) * video.duration);
-        if (Math.abs(video.currentTime - targetTime) > 0.05) {
-            video.currentTime = targetTime;
+        if (!video) return;
+
+        // Set playback rate to 0.7x (slower)
+        video.playbackRate = 0.7;
+
+        if (progress > 0.5) {
+            // Play if visible
+            if (video.paused) {
+                video.play().catch(() => {
+                    // Handle autoplay policy issues
+                });
+            }
+        } else if (progress < 0.1) {
+            // Reset if scrolled away
+            if (!video.paused || video.currentTime > 0) {
+                video.pause();
+                video.currentTime = 0;
+                textTriggeredRef.current = false;
+                if (onVideoReset) onVideoReset();
+            }
         }
-    }, [progress]);
+    }, [progress, onVideoReset]);
+
+    // Handle Video Events (End & Progress)
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const handleEnded = () => {
+            if (onVideoEnd) onVideoEnd();
+        };
+
+        const handleTimeUpdate = () => {
+            if (onTextTrigger && !textTriggeredRef.current && video.duration > 0) {
+                if (video.currentTime / video.duration > 0.25) {
+                    textTriggeredRef.current = true;
+                    onTextTrigger();
+                }
+            }
+        };
+
+        video.addEventListener('ended', handleEnded);
+        video.addEventListener('timeupdate', handleTimeUpdate);
+
+        return () => {
+            video.removeEventListener('ended', handleEnded);
+            video.removeEventListener('timeupdate', handleTimeUpdate);
+        };
+    }, [onVideoEnd, onTextTrigger]);
 
     // Main Rendering Loop
     useEffect(() => {
@@ -200,6 +248,14 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         let animationFrameId: number;
 
         const draw = () => {
+            // Optimization: Stop drawing if progress is 0 (invisible)
+            if (progress <= 0 && !isTransitioning) {
+                animationFrameId = requestAnimationFrame(draw); // Keep loop alive but do nothing? No, better to stop.
+                // Actually, if we stop, we need a way to restart.
+                // The useEffect dependency [progress] will restart it if progress changes from 0 to >0.
+                return;
+            }
+
             // 0. Clear Main and Content
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             contentCtx.clearRect(0, 0, contentCanvas.width, contentCanvas.height);
@@ -208,16 +264,20 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             const imgAspect = sketch.naturalWidth / sketch.naturalHeight;
             const canvasAspect = canvas.width / canvas.height;
             let drawW, drawH, offsetX, offsetY;
+
+            // Scale factor increased by 5% (1.05) - slightly larger than original
+            const scale = 1.05;
+
             if (imgAspect > canvasAspect) {
-                drawW = canvas.width;
-                drawH = canvas.width / imgAspect;
-                offsetX = 0;
+                drawW = canvas.width * scale;
+                drawH = (canvas.width / imgAspect) * scale;
+                offsetX = (canvas.width - drawW) / 2;
                 offsetY = (canvas.height - drawH) / 2;
             } else {
-                drawH = canvas.height;
-                drawW = canvas.height * imgAspect;
+                drawH = canvas.height * scale;
+                drawW = (canvas.height * imgAspect) * scale;
                 offsetX = (canvas.width - drawW) / 2;
-                offsetY = 0;
+                offsetY = (canvas.height - drawH) / 2;
             }
 
             // --- STEP 1: Compose Content (Sketch + Spot) ---
@@ -229,20 +289,38 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
                 spotCtx.clearRect(0, 0, spotCanvas.width, spotCanvas.height);
                 spotCtx.save();
 
-                spotCtx.filter = 'url(#wobbly-filter)';
+                // Optimization: Removed expensive SVG filter 'url(#wobbly-filter)'
+                // Instead, draw multiple overlapping circles with slight offsets to simulate irregularity
+
+                const baseRadius = spotRadius.current;
+
+                // 1. Main Circle
                 const gradient = spotCtx.createRadialGradient(
                     mousePos.x, mousePos.y, 0,
-                    mousePos.x, mousePos.y, spotRadius.current // Use dynamic radius
+                    mousePos.x, mousePos.y, baseRadius
                 );
                 gradient.addColorStop(0, 'white');
-                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
                 gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
                 spotCtx.fillStyle = gradient;
                 spotCtx.beginPath();
-                spotCtx.arc(mousePos.x, mousePos.y, spotRadius.current * 1.2, 0, Math.PI * 2); // Slightly larger arc
+                spotCtx.arc(mousePos.x, mousePos.y, baseRadius * 1.2, 0, Math.PI * 2);
                 spotCtx.fill();
-                spotCtx.filter = 'none';
+
+                // 2. Secondary "Wobble" Circles (Static offsets for performance, or use simple math)
+                // To make it truly efficient, we just use a slightly larger, softer circle behind it
+                const outerGradient = spotCtx.createRadialGradient(
+                    mousePos.x, mousePos.y, 0,
+                    mousePos.x, mousePos.y, baseRadius * 1.1
+                );
+                outerGradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.4)');
+                outerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+                spotCtx.fillStyle = outerGradient;
+                spotCtx.beginPath();
+                spotCtx.arc(mousePos.x + 5, mousePos.y - 5, baseRadius * 1.3, 0, Math.PI * 2);
+                spotCtx.fill();
 
                 spotCtx.globalCompositeOperation = 'source-in';
                 spotCtx.drawImage(color, offsetX, offsetY, drawW, drawH);
@@ -283,14 +361,27 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             // --- STEP 3: Final Composite ---
             ctx.drawImage(contentCanvas, 0, 0);
             ctx.globalCompositeOperation = 'destination-in';
-            ctx.drawImage(maskCanvas, 0, 0, canvas.width, canvas.height);
+
+            // Scale mask by 5% (1.05)
+            const maskScale = 1.05;
+            const maskW = canvas.width * maskScale;
+            const maskH = canvas.height * maskScale;
+            const maskX = (canvas.width - maskW) / 2;
+            const maskY = (canvas.height - maskH) / 2;
+
+            ctx.drawImage(maskCanvas, maskX, maskY, maskW, maskH);
             ctx.globalCompositeOperation = 'source-over';
 
             animationFrameId = requestAnimationFrame(draw);
         };
 
         const startDrawing = () => {
-            if (sketch.complete && color.complete) draw();
+            if (sketch.complete && color.complete) {
+                // Only start if progress > 0
+                if (progress > 0) {
+                    draw();
+                }
+            }
         };
         sketch.onload = startDrawing;
         color.onload = startDrawing;
@@ -298,6 +389,26 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
 
         return () => cancelAnimationFrame(animationFrameId);
     }, [isHovering, mousePos, isTransitioning, progress]);
+
+    const handleMouseEnter = () => {
+        setIsHovering(true);
+        // Animate spot from 0 to base size (130)
+        gsap.to(spotRadius, {
+            current: 130, // Reverted to original size
+            duration: 0.5,
+            ease: "back.out(1.7)"
+        });
+    };
+
+    const handleMouseLeave = () => {
+        setIsHovering(false);
+        // Animate spot back to 0
+        gsap.to(spotRadius, {
+            current: 0,
+            duration: 0.3,
+            ease: "power2.in"
+        });
+    };
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!canvasRef.current) return;
@@ -328,15 +439,15 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
 
         // Animate Spot Radius (Expand to fill screen with color)
         gsap.to(spotRadius, {
-            current: 2500,
-            duration: 1.5,
-            ease: "power2.inOut"
+            current: 3000,
+            duration: 3.0, // Adjusted duration
+            ease: "power2.inOut" // Reverted to original easing for better feel
         });
 
         // Animate Ink Expansion (Bleed ink to fill screen)
         gsap.to(maskExpansion, {
-            current: 30, // Increase density 30x to make ink bleed everywhere
-            duration: 1.5,
+            current: 50,
+            duration: 3.0, // Adjusted duration
             ease: "power2.inOut",
             onComplete: onOpenProject
         });
@@ -346,21 +457,12 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         <div
             ref={containerRef}
             className="relative max-w-[1600px] w-full aspect-[3/2] cursor-pointer mx-auto overflow-hidden rounded-sm"
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             onMouseMove={handleMouseMove}
             onClick={handleClick}
         >
-            {/* SVG Filter Definition */}
-            <svg style={{ position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}>
-                <defs>
-                    <filter id="wobbly-filter">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" result="noise" />
-                        <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" />
-                        <feGaussianBlur stdDeviation="2" />
-                    </filter>
-                </defs>
-            </svg>
+            {/* SVG Filter Removed for Performance */}
 
             {/* Main Canvas */}
             <canvas
@@ -381,6 +483,8 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             {/* Hidden Assets */}
             <img ref={sketchRef} src={sketchSrc} className="hidden" alt="sketch" />
             <img ref={colorRef} src={colorSrc} className="hidden" alt="color" />
+
+
         </div>
     );
 };

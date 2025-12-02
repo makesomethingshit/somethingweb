@@ -23,10 +23,10 @@ const Projects: React.FC = () => {
     return (
         <div className="w-full">
             {PROJECTS.map((project, index) => (
-                <section key={project.id || index} className="min-h-screen flex flex-col md:flex-row border-b border-ink/10 last:border-b-0">
+                <section key={project.id || index} className="min-h-screen flex flex-col md:flex-row items-center justify-center gap-4 md:gap-12 border-b border-ink/10 last:border-b-0 py-12 md:py-0">
                     {/* Left Page (Visual) */}
-                    <div className="w-full md:w-1/2 h-[50vh] md:h-screen relative overflow-hidden flex items-center justify-center bg-paper">
-                        <div className="relative w-full h-full group cursor-pointer" onClick={() => handleOpenModal(project)}>
+                    <div className="w-full md:w-[45%] h-[40vh] md:h-[60vh] relative overflow-hidden flex items-center justify-end bg-paper">
+                        <div className="relative w-full max-w-lg h-full group cursor-pointer" onClick={() => handleOpenModal(project)}>
                             <div className="absolute inset-0 bg-ink/5 z-10 group-hover:bg-ink/0 transition-colors duration-700"></div>
                             <img
                                 src={project.imageUrl}
@@ -40,7 +40,7 @@ const Projects: React.FC = () => {
                     </div>
 
                     {/* Right Page (Text) */}
-                    <div className="w-full md:w-1/2 h-[50vh] md:h-screen flex items-center justify-center p-8 md:p-24 relative">
+                    <div className="w-full md:w-[45%] h-auto md:h-[60vh] flex items-center justify-start p-8 md:p-12 relative">
                         {/* Inner Content */}
                         <div className="max-w-md w-full">
                             <div className="flex flex-wrap gap-2 mb-6">

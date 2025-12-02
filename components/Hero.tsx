@@ -8,6 +8,56 @@ import ProjectReveal from './ProjectReveal';
 import { PROJECTS } from '../constants';
 import { Project } from '../types';
 import ProjectModal from './ProjectModal';
+import { motion } from 'framer-motion';
+
+const TypewriterText: React.FC<{ text: string; delay?: number; className?: string }> = ({ text, delay = 0, className = "" }) => {
+  const letters = Array.from(text);
+
+  const container = {
+    hidden: { opacity: 0 },
+    visible: (i = 1) => ({
+      opacity: 1,
+      transition: { staggerChildren: 0.05, delayChildren: delay }
+    })
+  };
+
+  const child = {
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring" as const,
+        damping: 12,
+        stiffness: 100,
+      },
+    },
+    hidden: {
+      opacity: 0,
+      y: 10,
+      transition: {
+        type: "spring" as const,
+        damping: 12,
+        stiffness: 100,
+      },
+    },
+  };
+
+  return (
+    <motion.div
+      style={{ display: "inline-block" }} // Ensure inline-block for proper spacing
+      variants={container}
+      initial="hidden"
+      animate="visible"
+      className={className}
+    >
+      {letters.map((letter, index) => (
+        <motion.span variants={child} key={index}>
+          {letter === " " ? "\u00A0" : letter}
+        </motion.span>
+      ))}
+    </motion.div>
+  );
+};
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -40,6 +90,7 @@ const Hero: React.FC = () => {
   const frameCount = 122;
   const currentFrameRef = useRef(0);
   const [revealProgress, setRevealProgress] = useState(0);
+  const [showText, setShowText] = useState(false);
 
   const gridAnimatedRef = useRef(false);
 
@@ -130,12 +181,20 @@ const Hero: React.FC = () => {
       }
     };
 
+    // Use requestAnimationFrame for smooth rendering
+    let animationFrameId: number;
+    const renderLoop = () => {
+      renderFrame(currentFrameRef.current);
+      animationFrameId = requestAnimationFrame(renderLoop);
+    };
+    renderLoop();
+
     // Set canvas size with debounce
     let resizeTimeout: ReturnType<typeof setTimeout>;
     const setCanvasSize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      renderFrame(currentFrameRef.current);
+      // renderFrame(currentFrameRef.current); // Handled by loop
     };
 
     const handleResize = () => {
@@ -145,7 +204,7 @@ const Hero: React.FC = () => {
 
     setCanvasSize();
     window.addEventListener('resize', handleResize);
-    renderFrame(0);
+    // renderFrame(0); // Handled by loop
 
     // Setup ScrollTrigger
     ScrollTrigger.getAll().forEach(t => t.kill());
@@ -172,7 +231,7 @@ const Hero: React.FC = () => {
         const videoProgress = Math.min(1, p / 0.6);
         const frameIndex = videoProgress * (frameCount - 1);
         currentFrameRef.current = frameIndex;
-        renderFrame(frameIndex);
+        // renderFrame(frameIndex); // Handled by loop
 
         // 2. Grid Animation (Triggered at 60%)
         if (p > 0.6) {
@@ -244,6 +303,7 @@ const Hero: React.FC = () => {
     return () => {
       ScrollTrigger.getAll().forEach(t => t.kill());
       window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
     };
   }, [imagesLoaded]);
 
@@ -265,7 +325,7 @@ const Hero: React.FC = () => {
         <canvas
           ref={canvasRef}
           className="absolute top-0 left-0 w-full h-full object-cover"
-          style={{ willChange: 'contents' }}
+          style={{ willChange: 'contents, transform' }} // Hint to browser
         />
 
         {/* Scroll Hint Text (Initial View) */}
@@ -290,23 +350,32 @@ const Hero: React.FC = () => {
         {/* Index Content (End View) */}
         <div
           ref={indexContainerRef}
-          className="absolute inset-0 grid grid-cols-12 gap-8 items-center z-30 opacity-0 pointer-events-none p-4 md:p-12 lg:p-24"
+          className="absolute inset-0 flex flex-col items-center justify-center gap-8 z-30 opacity-0 pointer-events-none p-4"
         >
-          <div className="col-span-12 md:col-span-8">
+          <div className="w-full max-w-4xl flex justify-center">
             <ProjectReveal
               progress={revealProgress}
               onOpenProject={handleOpenProject}
               resetKey={resetKey}
+              onTextTrigger={() => setShowText(true)}
+              onVideoReset={() => setShowText(false)}
             />
           </div>
 
-          <div className="col-span-12 md:col-span-4 text-ink flex flex-col justify-center">
-            <div style={{ opacity: Math.max(0, (revealProgress - 0.5) * 2), transform: `translateY(${(1 - Math.max(0, (revealProgress - 0.5) * 2)) * 20}px)` }}>
-              <h2 className="text-5xl font-serif mb-6">{PROJECTS[0].title}</h2>
-              <p className="font-sans text-sm tracking-widest uppercase opacity-70">
-                {PROJECTS[0].description}
-              </p>
-            </div>
+          <div className="w-full text-ink flex flex-col justify-center items-center text-center -mt-24 relative z-40 min-h-[150px]">
+            {showText && (
+              <>
+                <TypewriterText
+                  text={PROJECTS[0].title}
+                  className="text-5xl font-serif mb-6 block"
+                />
+                <TypewriterText
+                  text={PROJECTS[0].description}
+                  delay={1.5} // Start after title finishes roughly
+                  className="font-sans text-sm tracking-widest uppercase opacity-70 block"
+                />
+              </>
+            )}
           </div>
         </div>
 
