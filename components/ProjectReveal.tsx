@@ -9,9 +9,11 @@ interface ProjectRevealProps {
     onVideoEnd?: () => void;
     onVideoReset?: () => void;
     onTextTrigger?: () => void;
+    onInkDropComplete?: () => void;
+    skipAnimation?: boolean;
 }
 
-const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, resetKey, onVideoEnd, onVideoReset, onTextTrigger }) => {
+const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, resetKey, onVideoEnd, onVideoReset, onTextTrigger, onInkDropComplete, skipAnimation = false }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -40,6 +42,14 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isTransitioning, setIsTransitioning] = useState(false);
 
+    // Handle skipAnimation side effects (Text Trigger)
+    useEffect(() => {
+        if (skipAnimation && !textTriggeredRef.current && onTextTrigger) {
+            textTriggeredRef.current = true;
+            onTextTrigger();
+        }
+    }, [skipAnimation, onTextTrigger]);
+
     // Reset Logic
     useEffect(() => {
         if (resetKey > 0) {
@@ -56,6 +66,16 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             });
         }
     }, [resetKey]);
+
+    // Handle skipAnimation initialization
+    useEffect(() => {
+        if (skipAnimation) {
+            // Ensure mask expansion is at 1.0 (masked state) not 50 (revealed state)
+            maskExpansion.current = 1.0;
+            // Ensure spot radius is 0 initially (will expand on hover)
+            spotRadius.current = 0;
+        }
+    }, [skipAnimation]);
 
     // Assets
     const sketchSrc = "/projects/project1_sketch.png";
@@ -174,6 +194,14 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         const video = videoRef.current;
         if (!video) return;
 
+        // If skipping, ensure we are at the end
+        if (skipAnimation) {
+            if (video.duration) {
+                video.currentTime = video.duration - 0.1;
+            }
+            return;
+        }
+
         // Set playback rate to 1.5x (faster)
         video.playbackRate = 1.5;
 
@@ -195,7 +223,7 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
                 if (onVideoReset) onVideoReset();
             }
         }
-    }, [progress, onVideoReset]);
+    }, [progress, onVideoReset, skipAnimation]);
 
     // Handle Video Events (End & Progress)
     useEffect(() => {
@@ -283,6 +311,14 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             }
 
             // --- STEP 1: Compose Content (Sketch + Spot) ---
+
+            // If skipping animation (Return Visit), we DO NOT just draw the full color image.
+            // We want the "masked sketch" state with hover interaction.
+            // So we proceed to standard drawing logic, but ensure the video (mask) is at the end.
+            if (skipAnimation) {
+                // Logic continues below...
+            }
+
             contentCtx.globalCompositeOperation = 'source-over';
             contentCtx.drawImage(sketch, offsetX, offsetY, drawW, drawH);
 
@@ -332,6 +368,7 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             }
 
             // --- STEP 2: WebGL Ink Mask ---
+            let maskDrawn = false;
             if (video.readyState >= 2) {
                 gl.useProgram(program);
 
@@ -358,21 +395,27 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
                 gl.clearColor(0, 0, 0, 0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
+                maskDrawn = true;
             }
 
             // --- STEP 3: Final Composite ---
             ctx.drawImage(contentCanvas, 0, 0);
-            ctx.globalCompositeOperation = 'destination-in';
 
-            // Scale mask by 5% (1.05)
-            const maskScale = 1.05;
-            const maskW = canvas.width * maskScale;
-            const maskH = canvas.height * maskScale;
-            const maskX = (canvas.width - maskW) / 2;
-            const maskY = (canvas.height - maskH) / 2;
+            // Only apply mask if it was actually drawn. 
+            // If skipping animation and video wasn't ready, we skip masking to ensure content is visible (fallback).
+            if (maskDrawn) {
+                ctx.globalCompositeOperation = 'destination-in';
 
-            ctx.drawImage(maskCanvas, maskX, maskY, maskW, maskH);
-            ctx.globalCompositeOperation = 'source-over';
+                // Scale mask by 5% (1.05)
+                const maskScale = 1.05;
+                const maskW = canvas.width * maskScale;
+                const maskH = canvas.height * maskScale;
+                const maskX = (canvas.width - maskW) / 2;
+                const maskY = (canvas.height - maskH) / 2;
+
+                ctx.drawImage(maskCanvas, maskX, maskY, maskW, maskH);
+                ctx.globalCompositeOperation = 'source-over';
+            }
 
             animationFrameId = requestAnimationFrame(draw);
         };
@@ -390,7 +433,7 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         if (sketch.complete && color.complete) startDrawing();
 
         return () => cancelAnimationFrame(animationFrameId);
-    }, [isHovering, mousePos, isTransitioning, progress]);
+    }, [isHovering, mousePos, isTransitioning, progress, skipAnimation]);
 
     // Global Mouse Move Listener for robust interaction
     useEffect(() => {
@@ -476,7 +519,10 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             current: 50,
             duration: 1.5, // Faster duration
             ease: "power2.inOut",
-            onComplete: onOpenProject
+            onComplete: () => {
+                onOpenProject();
+                if (onInkDropComplete) onInkDropComplete();
+            }
         });
     };
 

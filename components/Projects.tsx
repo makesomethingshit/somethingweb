@@ -21,28 +21,41 @@ const Projects: React.FC = () => {
     };
 
     return (
-        <div className="w-full">
+        <div className="w-full relative">
             {PROJECTS.map((project, index) => (
-                <section key={project.id || index} className="min-h-screen flex flex-col md:flex-row items-center justify-center gap-4 md:gap-12 border-b border-ink/10 last:border-b-0 py-12 md:py-0">
-                    {/* Left Page (Visual) */}
-                    <div className="w-full md:w-[45%] h-[30vh] md:h-[60vh] relative overflow-hidden flex items-center justify-end bg-paper">
-                        <div className="relative w-full max-w-lg h-full group cursor-pointer" onClick={() => handleOpenModal(project)}>
-                            <div className="absolute inset-0 bg-ink/5 z-10 group-hover:bg-ink/0 transition-colors duration-700"></div>
-                            <img
-                                src={project.imageUrl}
-                                alt={project.title}
-                                className="w-full h-full object-contain transition-transform duration-1000 group-hover:scale-105"
-                            />
-                            <div className="absolute bottom-8 left-8 z-20 md:hidden">
-                                <span className="bg-paper text-ink px-4 py-2 text-xs font-sans uppercase tracking-widest">Tap to View</span>
-                            </div>
-                        </div>
+                <section key={project.id || index} className="w-full h-screen flex items-center justify-center relative overflow-hidden bg-[#F5F0E6]">
+                    {/* Paper Texture Background */}
+                    <div className="absolute inset-0 z-0 pointer-events-none opacity-60 mix-blend-multiply">
+                        <img
+                            src="/patterns/cream-paper.png"
+                            alt="Paper Texture"
+                            className="w-full h-full object-cover"
+                        />
                     </div>
 
-                    {/* Right Page (Text) */}
-                    <div className="w-full md:w-[45%] h-auto md:h-[60vh] flex items-center justify-start p-8 md:p-12 relative">
-                        {/* Inner Content */}
-                        <div className="max-w-md w-full">
+                    {/* Grid Container matching Hero */}
+                    <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-3 items-start justify-center gap-8 z-30 p-4 md:p-12 pt-24 md:pt-32 pointer-events-none">
+
+                        {/* Left: Project Visual (2 Columns) */}
+                        <div className="w-full md:col-span-2 flex justify-center items-start h-full pointer-events-auto relative">
+                            <div className="w-full h-[50vh] md:h-[60vh] relative group cursor-pointer" onClick={() => handleOpenModal(project)}>
+                                <div className="absolute inset-0 bg-ink/5 z-10 group-hover:bg-ink/0 transition-colors duration-700"></div>
+                                <img
+                                    src={project.imageUrl}
+                                    alt={project.title}
+                                    className="w-full h-full object-contain transition-transform duration-1000 group-hover:scale-105"
+                                />
+                                <div className="absolute bottom-8 left-8 z-20 md:hidden">
+                                    <span className="bg-paper text-ink px-4 py-2 text-xs font-sans uppercase tracking-widest">Tap to View</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Vertical Divider Line */}
+                        <div className="hidden md:block absolute left-2/3 top-0 bottom-0 w-[1px] bg-ink/20 h-full -ml-4"></div>
+
+                        {/* Right: Text Content (1 Column) */}
+                        <div className="w-full md:col-span-1 text-ink flex flex-col justify-start items-start text-left relative z-40 min-h-[150px] pl-4 md:pl-8 pr-4 md:pr-12 pt-32 pointer-events-auto">
                             <div className="flex flex-wrap gap-2 mb-6">
                                 {project.techStack.map(tech => (
                                     <span key={tech} className="text-[10px] uppercase tracking-widest border border-ink/20 px-2 py-1 text-sub/80 rounded-full">
@@ -51,7 +64,7 @@ const Projects: React.FC = () => {
                                 ))}
                             </div>
 
-                            <h3 className="font-serif text-3xl md:text-5xl text-ink leading-tight mb-6 group cursor-pointer hover:text-accent transition-colors" onClick={() => handleOpenModal(project)}>
+                            <h3 className="font-serif text-3xl md:text-5xl lg:text-6xl text-ink leading-tight mb-6 group cursor-pointer hover:text-accent transition-colors block break-words" onClick={() => handleOpenModal(project)}>
                                 {project.title}
                             </h3>
 

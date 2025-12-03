@@ -1,35 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import MenuOverlay from './MenuOverlay';
+import { useIntro } from '../context/IntroContext';
 
 const Navigation: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isVisible, setIsVisible] = useState(true);
     const location = useLocation();
     const isMain = location.pathname === '/';
+    const { introFinished } = useIntro();
 
     useEffect(() => {
-        const handleScroll = () => {
-            if (isMain) {
-                // On main page, show button only after scrolling a bit (e.g., past the video intro)
-                // Or keep it always visible but maybe change style.
-                // For now, let's keep it always visible for accessibility, 
-                // or maybe hide it initially if it interferes with the intro.
-                // User requested "Global Navigation", so let's keep it simple and visible.
-                // But to avoid clashing with the "Scroll to Open" text, maybe fade it in?
-
-                // Let's make it appear after 100px scroll on main page to keep intro clean
-                setIsVisible(window.scrollY > 100);
-            } else {
-                setIsVisible(true);
-            }
-        };
-
-        window.addEventListener('scroll', handleScroll);
-        handleScroll(); // Initial check
-
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [isMain]);
+        if (isMain) {
+            // On main page, show button only after intro is finished
+            setIsVisible(introFinished);
+        } else {
+            setIsVisible(true);
+        }
+    }, [isMain, introFinished]);
 
     return (
         <>

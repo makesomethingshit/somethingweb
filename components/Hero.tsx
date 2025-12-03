@@ -11,14 +11,17 @@ import ProjectModal from './ProjectModal';
 import { motion } from 'framer-motion';
 import { useIntro } from '../context/IntroContext';
 
-const TypewriterText: React.FC<{ text: string; delay?: number; className?: string; style?: React.CSSProperties }> = ({ text, delay = 0, className = "", style = {} }) => {
+const TypewriterText: React.FC<{ text: string; delay?: number; className?: string; style?: React.CSSProperties; instant?: boolean }> = ({ text, delay = 0, className = "", style = {}, instant = false }) => {
   const letters = Array.from(text);
 
   const container = {
     hidden: { opacity: 0 },
     visible: (i = 1) => ({
       opacity: 1,
-      transition: { staggerChildren: 0.02, delayChildren: delay } // Faster stagger
+      transition: {
+        staggerChildren: instant ? 0 : 0.02,
+        delayChildren: instant ? 0 : delay
+      }
     })
   };
 
@@ -30,16 +33,12 @@ const TypewriterText: React.FC<{ text: string; delay?: number; className?: strin
         type: "spring" as const,
         damping: 12,
         stiffness: 100,
+        duration: instant ? 0 : undefined
       },
     },
     hidden: {
       opacity: 0,
       y: 10,
-      transition: {
-        type: "spring" as const,
-        damping: 12,
-        stiffness: 100,
-      },
     },
   };
 
@@ -47,7 +46,7 @@ const TypewriterText: React.FC<{ text: string; delay?: number; className?: strin
     <motion.div
       style={{ display: "block", ...style }}
       variants={container}
-      initial="hidden"
+      initial={instant ? "visible" : "hidden"}
       animate="visible"
       className={className}
     >
@@ -60,9 +59,17 @@ const TypewriterText: React.FC<{ text: string; delay?: number; className?: strin
   );
 };
 
+
 gsap.registerPlugin(ScrollTrigger);
 
-const Hero: React.FC = () => {
+interface HeroProps {
+  onNextPage?: () => void;
+}
+
+const Hero: React.FC<HeroProps> = ({ onNextPage }) => {
+  const [localIntroFinished, setLocalIntroFinished] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const indexContainerRef = useRef<HTMLDivElement>(null);
   const scrollHintRef = useRef<HTMLDivElement>(null);
@@ -75,11 +82,25 @@ const Hero: React.FC = () => {
 
   const [hasClicked, setHasClicked] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
+  const [inkDropFinished, setInkDropFinished] = useState(false);
 
   // Intro Interaction States
   const [introClicked, setIntroClicked] = useState(false);
-  const [localIntroFinished, setLocalIntroFinished] = useState(false); // Local state for rendering
-  const { setIntroFinished } = useIntro(); // Global state for App.tsx
+  const { introFinished, setIntroFinished } = useIntro(); // Global state for App.tsx
+
+  // Capture the initial state of introFinished on mount.
+  // If it's already true on mount, it means we are returning (skip animations).
+  // If it's false on mount, we are in the first flow (play animations).
+  const isReturnVisit = useRef(introFinished).current;
+
+  // Initialize local state based on global state to prevent re-running intro
+  useEffect(() => {
+    if (introFinished) {
+      setLocalIntroFinished(true);
+      setShowText(true); // Show text immediately
+      // Do not set imagesLoaded(true) here, let them reload naturally
+    }
+  }, [introFinished]);
 
   const handleOpenProject = () => {
     setSelectedProject(PROJECTS[0]);
@@ -93,12 +114,11 @@ const Hero: React.FC = () => {
     setResetKey(prev => prev + 1);
   };
 
-  const [imagesLoaded, setImagesLoaded] = useState(false);
   const [loadProgress, setLoadProgress] = useState(0);
   const imagesRef = useRef<ImageBitmap[]>([]);
 
   const frameCount = 122;
-  const currentFrameRef = useRef(0);
+  const currentFrameRef = useRef(introFinished ? frameCount - 1 : 0);
   const [revealProgress, setRevealProgress] = useState(0);
   const [showText, setShowText] = useState(false);
 
@@ -317,6 +337,18 @@ const Hero: React.FC = () => {
       Object.assign(document.documentElement.style, styles);
     };
   }, [localIntroFinished]);
+  useEffect(() => {
+    if (!localIntroFinished || !onNextPage) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY > 50) { // Threshold for scroll down
+        onNextPage();
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel);
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [localIntroFinished, onNextPage]);
 
   // Calculate Text Delays
   const titleText = PROJECTS[0].title;
@@ -347,8 +379,8 @@ const Hero: React.FC = () => {
         }
       `}</style>
 
-      {/* Persistent Background Canvas */}
-      <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
+      {/* Persistent Background Canvas - Changed to absolute for PageTurner compatibility */}
+      <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
         <canvas
           ref={canvasRef}
           className="absolute top-0 left-0 w-full h-full object-cover"
@@ -356,10 +388,10 @@ const Hero: React.FC = () => {
         />
       </div>
 
-      {/* Intro Click Layer (Visible only during intro) */}
+      {/* Intro Click Layer (Visible only during intro) - Changed to absolute */}
       {!localIntroFinished && (
         <div
-          className="fixed inset-0 w-full h-full z-50 cursor-pointer"
+          className="absolute inset-0 w-full h-full z-50 cursor-pointer"
           onClick={handleIntroClick}
         >
           {/* Hover Trigger Area (Restricted to Book Area) */}
@@ -406,8 +438,8 @@ const Hero: React.FC = () => {
       {/* Main Content Layer (Visible after Intro) */}
       {localIntroFinished && (
         <>
-          {/* Fixed Background (Grid) */}
-          <div className="fixed inset-0 w-full h-full z-1 pointer-events-none">
+          {/* Fixed Background (Grid) - Changed to absolute */}
+          <div className="absolute inset-0 w-full h-full z-1 pointer-events-none">
             <div
               ref={gridContainerRef}
               className="absolute inset-0 w-full h-full mix-blend-multiply opacity-0 flex items-center justify-center p-4 md:p-12 lg:p-24"
@@ -423,11 +455,11 @@ const Hero: React.FC = () => {
             <div className="w-full h-full flex items-center justify-center">
               <div
                 ref={indexContainerRef}
-                className="absolute inset-0 flex flex-col md:flex-row items-start justify-center gap-8 z-30 p-4 md:p-12 pt-24 md:pt-32"
+                className="absolute inset-0 grid grid-cols-1 md:grid-cols-3 items-start justify-center gap-8 z-30 p-4 md:p-12 pt-24 md:pt-32"
                 style={{ opacity: 1, pointerEvents: 'auto' }}
               >
                 {/* Left: Project Reveal (Larger) */}
-                <div className="w-full md:w-2/3 flex justify-center items-start pointer-events-auto relative">
+                <div className="w-full md:col-span-2 flex justify-center items-start pointer-events-auto relative">
                   <ProjectReveal
                     progress={1}
                     onOpenProject={handleOpenProject}
@@ -435,27 +467,31 @@ const Hero: React.FC = () => {
                     onTextTrigger={() => setShowText(true)}
                     onVideoReset={() => setShowText(false)}
                     onVideoEnd={() => setVideoEnded(true)}
+                    onInkDropComplete={() => setInkDropFinished(true)}
+                    skipAnimation={isReturnVisit}
                   />
                 </div>
 
-                {/* Vertical Divider Line */}
+                {/* Vertical Divider Line - Absolute to avoid taking grid cell */}
                 <div
                   ref={verticalLineRef}
-                  className="hidden md:block w-[1px] bg-ink/20 h-full origin-top scale-y-0 opacity-0"
+                  className="hidden md:block absolute left-2/3 top-0 bottom-0 w-[1px] bg-ink/20 h-full origin-top scale-y-0 opacity-0 -ml-4" // -ml-4 to center in gap
                 ></div>
 
                 {/* Right: Text Content */}
-                <div className="w-full md:w-1/3 text-ink flex flex-col justify-start items-start text-left relative z-40 min-h-[150px] pl-4 md:pl-8 pr-4 md:pr-12 pt-32"> {/* Added pt-32 for visual alignment */}
+                <div className="w-full md:col-span-1 text-ink flex flex-col justify-start items-start text-left relative z-40 min-h-[150px] pl-4 md:pl-8 pr-4 md:pr-12 pt-32"> {/* Added pt-32 for visual alignment */}
                   {showText && (
                     <>
                       <TypewriterText
                         text={titleText}
                         className="text-3xl md:text-5xl lg:text-6xl font-serif mb-4 md:mb-8 block break-words" // Responsive text
+                        instant={isReturnVisit}
                       />
                       <TypewriterText
                         text={descText}
                         delay={descDelay}
                         className="font-sans text-xs md:text-sm tracking-widest uppercase opacity-70 block mb-8 break-words"
+                        instant={isReturnVisit}
                       />
 
                       {/* Body Content */}
@@ -464,11 +500,13 @@ const Hero: React.FC = () => {
                           text={body1Text}
                           delay={body1Delay}
                           className="block mb-4"
+                          instant={isReturnVisit}
                         />
                         <TypewriterText
                           text={body2Text}
                           delay={body2Delay}
                           className="block"
+                          instant={isReturnVisit}
                         />
                       </div>
                     </>

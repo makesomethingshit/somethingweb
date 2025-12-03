@@ -18,6 +18,7 @@ import FloatingTypography from './components/FloatingTypography';
 import Navigation from './components/Navigation';
 import GridOverlay from './components/GridOverlay';
 import { useIntro } from './context/IntroContext';
+import PageTurner from './components/PageTurner';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -78,11 +79,64 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 // Main Landing Page Structure
 const MainLanding: React.FC = () => {
+  const [currentPage, setCurrentPage] = React.useState<'hero' | 'projects'>('hero');
+  const [isTurning, setIsTurning] = React.useState(false);
+
+  useEffect(() => {
+    console.log("App State:", { currentPage, isTurning });
+  }, [currentPage, isTurning]);
+
+  const handleNextPage = () => {
+    if (currentPage === 'hero' && !isTurning) {
+      setIsTurning(true);
+    }
+  };
+
+  const handleTurnComplete = () => {
+    if (isTurning) {
+      setCurrentPage('projects');
+      setIsTurning(false);
+    }
+  };
+
+  const handlePrevPage = () => {
+    setCurrentPage('hero');
+    setIsTurning(true); // Mounts PageTurner in "turned" state (-120deg)
+
+    // Trigger animation back to 0deg
+    setTimeout(() => {
+      setIsTurning(false);
+    }, 50);
+  };
+
+  const handleProjectsWheel = (e: React.WheelEvent) => {
+    const container = e.currentTarget;
+    if (container.scrollTop === 0 && e.deltaY < -50 && currentPage === 'projects') {
+      handlePrevPage();
+    }
+  };
+
   return (
-    <>
-      <Hero />
-      {/* Note: The Manifesto/Prologue is now integrated into Hero for the continuous scroll effect */}
-    </>
+    <div className="relative w-full min-h-screen overflow-hidden">
+      {/* Projects Layer (Bottom) */}
+      <div
+        onWheel={handleProjectsWheel}
+        className={`absolute inset-0 z-0 w-full h-full overflow-y-auto transition-opacity duration-1000 ${isTurning || currentPage === 'projects' ? 'opacity-100' : 'opacity-0'}`}
+      >
+        <div className="pt-24">
+          <Projects />
+        </div>
+      </div>
+
+      {/* Hero Layer (Top - Page Turner) */}
+      {currentPage === 'hero' && (
+        <div className="absolute inset-0 z-10 w-full h-full">
+          <PageTurner isTurning={isTurning} onTurnComplete={handleTurnComplete}>
+            <Hero onNextPage={handleNextPage} />
+          </PageTurner>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -157,7 +211,7 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ScrollToTop />
       {/* Removed overflow-x-hidden from here to prevent sticky issues in some browsers, handling on body via CSS if needed */}
       <div className="bg-paper text-ink min-h-screen selection:bg-accent selection:text-white relative flex flex-col font-sans">
