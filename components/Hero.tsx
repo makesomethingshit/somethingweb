@@ -11,62 +11,16 @@ import ProjectModal from './ProjectModal';
 import { motion } from 'framer-motion';
 import { useIntro } from '../context/IntroContext';
 
-const TypewriterText: React.FC<{ text: string; delay?: number; className?: string; style?: React.CSSProperties; instant?: boolean }> = ({ text, delay = 0, className = "", style = {}, instant = false }) => {
-  const letters = Array.from(text);
-
-  const container = {
-    hidden: { opacity: 0 },
-    visible: (i = 1) => ({
-      opacity: 1,
-      transition: {
-        staggerChildren: instant ? 0 : 0.02,
-        delayChildren: instant ? 0 : delay
-      }
-    })
-  };
-
-  const child = {
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring" as const,
-        damping: 12,
-        stiffness: 100,
-        duration: instant ? 0 : undefined
-      },
-    },
-    hidden: {
-      opacity: 0,
-      y: 10,
-    },
-  };
-
-  return (
-    <motion.div
-      style={{ display: "block", ...style }}
-      variants={container}
-      initial={instant ? "visible" : "hidden"}
-      animate="visible"
-      className={className}
-    >
-      {letters.map((letter, index) => (
-        <motion.span variants={child} key={index}>
-          {letter === " " ? "\u00A0" : letter}
-        </motion.span>
-      ))}
-    </motion.div>
-  );
-};
+import TypewriterText from './TypewriterText';
 
 
 gsap.registerPlugin(ScrollTrigger);
 
 interface HeroProps {
-  onNextPage?: () => void;
+  // No props needed for now
 }
 
-const Hero: React.FC<HeroProps> = ({ onNextPage }) => {
+const Hero: React.FC<HeroProps> = () => {
   const [localIntroFinished, setLocalIntroFinished] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
@@ -171,54 +125,52 @@ const Hero: React.FC<HeroProps> = ({ onNextPage }) => {
     };
   }, []);
 
-  // Setup canvas and Click Interaction
-  useEffect(() => {
-    if (!imagesLoaded || !canvasRef.current) return;
-
+  // Render a specific frame - Defined in component scope
+  const renderFrame = (index: number) => {
+    if (!canvasRef.current) return;
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d', { alpha: false });
     if (!context) return;
 
-    // Render a specific frame
-    const renderFrame = (index: number) => {
-      const frameIndex = Math.min(Math.floor(index), frameCount - 1);
-      const img = imagesRef.current[frameIndex];
+    const frameIndex = Math.min(Math.floor(index), frameCount - 1);
+    const img = imagesRef.current[frameIndex];
 
-      if (img) {
-        const imgAspect = img.width / img.height;
-        const canvasAspect = canvas.width / canvas.height;
+    if (img) {
+      const imgAspect = img.width / img.height;
+      const canvasAspect = canvas.width / canvas.height;
 
-        let drawWidth, drawHeight, offsetX, offsetY;
+      let drawWidth, drawHeight, offsetX, offsetY;
 
-        if (imgAspect > canvasAspect) {
-          drawHeight = canvas.height;
-          drawWidth = drawHeight * imgAspect;
-          offsetX = (canvas.width - drawWidth) / 2;
-          offsetY = 0;
-        } else {
-          drawWidth = canvas.width;
-          drawHeight = drawWidth / imgAspect;
-          offsetX = 0;
-          offsetY = (canvas.height - drawHeight) / 2;
-        }
-
-        context.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+      if (imgAspect > canvasAspect) {
+        drawHeight = canvas.height;
+        drawWidth = drawHeight * imgAspect;
+        offsetX = (canvas.width - drawWidth) / 2;
+        offsetY = 0;
+      } else {
+        drawWidth = canvas.width;
+        drawHeight = drawWidth / imgAspect;
+        offsetX = 0;
+        offsetY = (canvas.height - drawHeight) / 2;
       }
-    };
 
-    // Render Loop
-    let animationFrameId: number;
-    const renderLoop = () => {
-      renderFrame(currentFrameRef.current);
-      animationFrameId = requestAnimationFrame(renderLoop);
-    };
-    renderLoop();
+      context.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+    }
+  };
+
+  // Setup canvas and Initial Render
+  useEffect(() => {
+    if (!imagesLoaded || !canvasRef.current) return;
+
+    // Initial Render
+    renderFrame(currentFrameRef.current);
 
     // Resize Handler
     let resizeTimeout: ReturnType<typeof setTimeout>;
     const setCanvasSize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      if (!canvasRef.current) return;
+      canvasRef.current.width = window.innerWidth;
+      canvasRef.current.height = window.innerHeight;
+      renderFrame(currentFrameRef.current); // Re-render on resize
     };
     const handleResize = () => {
       clearTimeout(resizeTimeout);
@@ -229,7 +181,6 @@ const Hero: React.FC<HeroProps> = ({ onNextPage }) => {
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationFrameId);
     };
   }, [imagesLoaded]);
 
@@ -274,6 +225,7 @@ const Hero: React.FC<HeroProps> = ({ onNextPage }) => {
       ease: "power2.inOut",
       onUpdate: () => {
         currentFrameRef.current = videoObj.frame;
+        renderFrame(videoObj.frame); // Explicit render on update
       },
       onComplete: () => {
         // Video finished
@@ -305,50 +257,11 @@ const Hero: React.FC<HeroProps> = ({ onNextPage }) => {
     }, 3000); // Match duration exactly
   };
 
-  // Lock Body Scroll when Intro Finishes
-  useEffect(() => {
-    if (localIntroFinished) {
-      // Apply overflow hidden to prevent scrollbars, but allow event propagation for future page-turn logic
-      const styles = {
-        overflow: 'hidden',
-        height: '100%',
-        overscrollBehavior: 'none'
-      };
+  // Lock Body Scroll when Intro Finishes - REMOVED for Scrollytelling
+  // We want the parent to control scrolling now.
 
-      Object.assign(document.body.style, styles);
-      Object.assign(document.documentElement.style, styles);
-    } else {
-      const styles = {
-        overflow: '',
-        height: '',
-        overscrollBehavior: ''
-      };
-
-      Object.assign(document.body.style, styles);
-      Object.assign(document.documentElement.style, styles);
-    }
-    return () => {
-      const styles = {
-        overflow: '',
-        height: '',
-        overscrollBehavior: ''
-      };
-      Object.assign(document.body.style, styles);
-      Object.assign(document.documentElement.style, styles);
-    };
-  }, [localIntroFinished]);
-  useEffect(() => {
-    if (!localIntroFinished || !onNextPage) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (e.deltaY > 50) { // Threshold for scroll down
-        onNextPage();
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel);
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, [localIntroFinished, onNextPage]);
+  // Wheel Event Listener - REMOVED for Scrollytelling
+  // ScrollTrigger in App.tsx will handle the transition.
 
   // Calculate Text Delays
   const titleText = PROJECTS[0].title;
@@ -459,7 +372,7 @@ const Hero: React.FC<HeroProps> = ({ onNextPage }) => {
                 style={{ opacity: 1, pointerEvents: 'auto' }}
               >
                 {/* Left: Project Reveal (Larger) */}
-                <div className="w-full md:col-span-2 flex justify-center items-start pointer-events-auto relative">
+                <div className="w-full md:col-span-2 flex justify-center items-start pointer-events-auto relative -translate-x-12">
                   <ProjectReveal
                     progress={1}
                     onOpenProject={handleOpenProject}
@@ -469,6 +382,8 @@ const Hero: React.FC<HeroProps> = ({ onNextPage }) => {
                     onVideoEnd={() => setVideoEnded(true)}
                     onInkDropComplete={() => setInkDropFinished(true)}
                     skipAnimation={isReturnVisit}
+                    imageSrc="/projects/project1_image.png"
+                    sketchSrc="/projects/project1_sketch.png"
                   />
                 </div>
 

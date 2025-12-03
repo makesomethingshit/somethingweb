@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MemoryRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lenis from 'lenis';
@@ -13,13 +13,12 @@ import Experience from './components/Experience';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AIModal from './components/AIModal';
-import InteractiveBackground from './components/InteractiveBackground';
 import FloatingTypography from './components/FloatingTypography';
 import Navigation from './components/Navigation';
-import GridOverlay from './components/GridOverlay';
 import { useIntro } from './context/IntroContext';
-import PageTurner from './components/PageTurner';
+import PageTearTransition from './components/PageTearTransition';
 
+// Force reload
 gsap.registerPlugin(ScrollTrigger);
 
 // ScrollToTop Component
@@ -33,7 +32,7 @@ const ScrollToTop = () => {
 
 // Dust Overlay Component
 const DustOverlay = () => {
-  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,6 +40,8 @@ const DustOverlay = () => {
       // Fade out over the first 500px of scroll
       const newOpacity = Math.max(0, 1 - window.scrollY / 500);
       videoRef.current.style.opacity = newOpacity.toString();
+      // Optimization: Hide element when invisible
+      videoRef.current.style.display = newOpacity <= 0 ? 'none' : 'block';
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -77,65 +78,135 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </motion.div>
 );
 
-// Main Landing Page Structure
+// Main Landing Page Structure (Scrollytelling Implementation with CSS Sticky)
 const MainLanding: React.FC = () => {
-  const [currentPage, setCurrentPage] = React.useState<'hero' | 'projects'>('hero');
-  const [isTurning, setIsTurning] = React.useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const heroContainerRef = useRef<HTMLDivElement>(null);
+  const borderLayerRef = useRef<HTMLDivElement>(null);
+  const pageTearRef = useRef<{ setProgress: (p: number) => void }>(null);
+  const { introFinished } = useIntro();
 
   useEffect(() => {
-    console.log("App State:", { currentPage, isTurning });
-  }, [currentPage, isTurning]);
+    if (!introFinished || !containerRef.current) return;
 
-  const handleNextPage = () => {
-    if (currentPage === 'hero' && !isTurning) {
-      setIsTurning(true);
-    }
-  };
+    // Create ScrollTrigger for Playback (Image Sequence)
+    const trigger = ScrollTrigger.create({
+      trigger: containerRef.current,
+      start: "top -100px", // Wait until user scrolls 100px down
+      end: "+=50%", // Short scroll distance to trigger
+      pin: false, // CSS Sticky handles pinning
+      scrub: false, // Disable scrubbing
+      markers: false, // Disable markers
+      onEnter: () => {
+        // Animate progress 0 -> 1
+        const progressObj = { value: 0 };
+        gsap.to(progressObj, {
+          value: 1,
+          duration: 5.0, // Much slower playback
+          ease: "power2.inOut",
+          onUpdate: () => {
+            if (pageTearRef.current) {
+              pageTearRef.current.setProgress(progressObj.value);
+            }
+          },
+          overwrite: true
+        });
+      },
+      onLeaveBack: () => {
+        // Animate progress 1 -> 0
+        const progressObj = { value: 1 };
+        gsap.to(progressObj, {
+          value: 0,
+          duration: 4.0,
+          ease: "power2.inOut",
+          onUpdate: () => {
+            if (pageTearRef.current) {
+              pageTearRef.current.setProgress(progressObj.value);
+            }
+          },
+          overwrite: true
+        });
+      }
+    });
 
-  const handleTurnComplete = () => {
-    if (isTurning) {
-      setCurrentPage('projects');
-      setIsTurning(false);
-    }
-  };
+    ScrollTrigger.refresh();
 
-  const handlePrevPage = () => {
-    setCurrentPage('hero');
-    setIsTurning(true); // Mounts PageTurner in "turned" state (-120deg)
-
-    // Trigger animation back to 0deg
-    setTimeout(() => {
-      setIsTurning(false);
-    }, 50);
-  };
-
-  const handleProjectsWheel = (e: React.WheelEvent) => {
-    const container = e.currentTarget;
-    if (container.scrollTop === 0 && e.deltaY < -50 && currentPage === 'projects') {
-      handlePrevPage();
-    }
-  };
+    return () => {
+      trigger.kill();
+    };
+  }, [introFinished]);
 
   return (
-    <div className="relative w-full min-h-screen overflow-hidden">
-      {/* Projects Layer (Bottom) */}
-      <div
-        onWheel={handleProjectsWheel}
-        className={`absolute inset-0 z-0 w-full h-full overflow-y-auto transition-opacity duration-1000 ${isTurning || currentPage === 'projects' ? 'opacity-100' : 'opacity-0'}`}
-      >
-        <div className="pt-24">
+    // Scroll Container: Defines the total scroll distance (Reduced from 300vh)
+    <div ref={containerRef} className="relative w-full h-[150vh]">
+
+      {/* Sticky Viewport: Stays fixed while scrolling through the container */}
+      <div className="sticky top-0 w-full h-screen overflow-hidden">
+
+        {/* Projects Layer (Bottom, revealed by ink) */}
+        <div className="absolute inset-0 z-0 w-full h-full">
           <Projects />
         </div>
-      </div>
 
-      {/* Hero Layer (Top - Page Turner) */}
-      {currentPage === 'hero' && (
-        <div className="absolute inset-0 z-10 w-full h-full">
-          <PageTurner isTurning={isTurning} onTurnComplete={handleTurnComplete}>
-            <Hero onNextPage={handleNextPage} />
-          </PageTurner>
+        {/* Hero Layer (Top, masked by ink) */}
+        <div
+          ref={heroContainerRef}
+          className="absolute inset-0 z-10 w-full h-full"
+          style={{
+            // Initial Mask (White = Visible)
+            maskImage: 'none',
+            WebkitMaskImage: 'none',
+            maskMode: 'luminance',
+            WebkitMaskMode: 'luminance',
+            maskRepeat: 'no-repeat',
+            WebkitMaskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskPosition: 'center',
+            // Scale UP the Hero Mask to make the hole BIGGER
+            maskSize: '105%',
+            WebkitMaskSize: '105%',
+            willChange: 'mask-image', // Optimization Hint
+            transform: 'scaleX(-1)' // FLIP MASK HORIZONTALLY
+          } as any}
+        >
+          {/* Un-flip content so it looks normal */}
+          <div className="w-full h-full" style={{ transform: 'scaleX(-1)' }}>
+            <Hero />
+          </div>
         </div>
-      )}
+
+        {/* Ink Border Layer (Visible Black Ink at the Edge) */}
+        {/* Placed BEHIND Hero (z-5) but IN FRONT of Projects (z-0) */}
+        <div
+          ref={borderLayerRef}
+          className="absolute inset-0 z-[5] w-full h-full bg-black pointer-events-none"
+          style={{
+            maskImage: 'none',
+            WebkitMaskImage: 'none',
+            maskMode: 'luminance',
+            WebkitMaskMode: 'luminance',
+            maskRepeat: 'no-repeat',
+            WebkitMaskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskPosition: 'center',
+            // Keep Border Mask at 100% (Smaller Hole than Hero)
+            maskSize: '100%',
+            WebkitMaskSize: '100%',
+            willChange: 'mask-image', // Optimization Hint
+            transform: 'scaleX(-1)' // FLIP MASK HORIZONTALLY
+          } as any}
+        />
+
+        {/* Transition Overlay (Updates the Masks directly) */}
+        <PageTearTransition ref={pageTearRef} targetRef={heroContainerRef} borderRef={borderLayerRef} />
+
+        {/* Scroll Hint (Optional) */}
+        {introFinished && (
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-ink/50 text-xs uppercase tracking-widest animate-bounce pointer-events-none z-50">
+            Scroll to Explore
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -224,7 +295,7 @@ const App: React.FC = () => {
 
         {/* Subtle Background */}
         <div className="fixed inset-0 pointer-events-none opacity-40 z-0 bg-[url('/frames/intro_book_video00121.jpg')] bg-cover bg-center mix-blend-multiply"></div>
-        <InteractiveBackground />
+
 
         <AnimatePresence>
           {!introFinished && (
@@ -248,7 +319,7 @@ const App: React.FC = () => {
           <AnimatedRoutes />
         </main>
 
-        <Footer />
+        {/* <Footer /> */}
         <AIModal />
       </div>
     </Router>

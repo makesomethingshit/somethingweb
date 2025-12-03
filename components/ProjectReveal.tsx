@@ -11,9 +11,22 @@ interface ProjectRevealProps {
     onTextTrigger?: () => void;
     onInkDropComplete?: () => void;
     skipAnimation?: boolean;
+    imageSrc?: string;
+    sketchSrc?: string;
 }
 
-const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, resetKey, onVideoEnd, onVideoReset, onTextTrigger, onInkDropComplete, skipAnimation = false }) => {
+const ProjectReveal: React.FC<ProjectRevealProps> = ({
+    progress,
+    onOpenProject,
+    resetKey,
+    onVideoEnd,
+    onVideoReset,
+    onTextTrigger,
+    onInkDropComplete,
+    skipAnimation = false,
+    imageSrc = "/projects/project1_image.png",
+    sketchSrc
+}) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -78,8 +91,8 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
     }, [skipAnimation]);
 
     // Assets
-    const sketchSrc = "/projects/project1_sketch.png";
-    const colorSrc = "/projects/project1_image.png";
+    const finalSketchSrc = sketchSrc || imageSrc;
+    const finalColorSrc = imageSrc;
     const inkVideoSrc = "/overlays/ink_drop.mp4";
 
     // Initialize Canvases & WebGL
@@ -320,7 +333,16 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             }
 
             contentCtx.globalCompositeOperation = 'source-over';
+
+            // Apply grayscale filter if using same image for sketch
+            if (!sketchSrc) {
+                contentCtx.filter = 'grayscale(100%) contrast(1.2)';
+            } else {
+                contentCtx.filter = 'none';
+            }
+
             contentCtx.drawImage(sketch, offsetX, offsetY, drawW, drawH);
+            contentCtx.filter = 'none'; // Reset filter
 
             // Handle Hover Spot (Always draw if hovering OR transitioning)
             if ((isHovering || isTransitioning) && progress > 0.5) {
@@ -433,7 +455,7 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
         if (sketch.complete && color.complete) startDrawing();
 
         return () => cancelAnimationFrame(animationFrameId);
-    }, [isHovering, mousePos, isTransitioning, progress, skipAnimation]);
+    }, [isHovering, mousePos, isTransitioning, progress, skipAnimation, sketchSrc]);
 
     // Global Mouse Move Listener for robust interaction
     useEffect(() => {
@@ -484,9 +506,6 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             window.removeEventListener('mousemove', handleGlobalMouseMove);
         };
     }, [progress, isTransitioning]);
-
-    // Removed local handleMouseEnter/Leave/Move as global listener handles it
-    // Removed auto-focus useEffect
 
     const handleClick = (e: React.MouseEvent) => {
         if (isTransitioning || !canvasRef.current) return;
@@ -551,8 +570,8 @@ const ProjectReveal: React.FC<ProjectRevealProps> = ({ progress, onOpenProject, 
             />
 
             {/* Hidden Assets */}
-            <img ref={sketchRef} src={sketchSrc} className="hidden" alt="sketch" />
-            <img ref={colorRef} src={colorSrc} className="hidden" alt="color" />
+            <img ref={sketchRef} src={finalSketchSrc} className="hidden" alt="sketch" />
+            <img ref={colorRef} src={finalColorSrc} className="hidden" alt="color" />
 
 
         </div>
